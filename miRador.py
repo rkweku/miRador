@@ -24,31 +24,33 @@ from Bio.pairwise2 import format_alignment
 
 ########################## EXECUTION VARIABLES ###############################
 # Name of the genome file
-#genomeFilename = 'genome/test2.fa'
 genomeFilename = 'genome/Arabidopsis/all.fa'
+#genomeFilename = 'genome/fake/fakeGenome_c.fa'
 # List of library file names
-#libFilenames = ['libs/MaizeTest/1681_test2.txt', 'libs/MaizeTest/1682_test2.txt']
-libFilenames = ['libs/AT_pub2_sRNA/99_chopped.txt']
+#libFilenames = ['libs/MaizeTest/1681_test2.txt']#, 'libs/MaizeTest/1682_test2.txt']
+#libFilenames = ['libs/fake/fakeLibs_c.txt']#, 'libs/AT_pub2_sRNA/100_chopped.txt']
+libFilenames = ['libs/AT_pub2_sRNA/2202_chopped.txt']
 # Optional parameter of merged map files for each library. If these are set,
 # mapping the libFilenames will be bypassed
-mapFilenames = ['libs/AT_pub2_sRNA_99_chopped.map']
+mapFilenames = []#['libs/2202_chopped.map']#['libs/MaizeTest/1681_test2.map']
+#mapFilenames = ['libs/AT_pub2_sRNA/99_chopped.map']#
 # Maximum length over overhang
 overhang = 2
 # Penalty for a score
-gap = 6            ## Default:12 (from emboss website)
+gap = 12            ## Default:12 (from emboss website)
 # Score for a match
 match = 3           ## Default:3
 # Score for a mismatch
 mismatch = -4       ## Default:-4
 # Minimum score for a candidate miRNA precursor
-threshold = 30      ## Default:50 - This is the score threshold for cutoff
+threshold = 50      ## Default:50 - This is the score threshold for cutoff
 # Maximum inverted repeat length that can be identified as a candidate
 # Default is 300 based on max suggested by Axtell and Meyers (TPC 2018)
 maxRepLen = 300
 # Flag to run einverted for this genome file
-runEInvertedFlag = 0
+runEInvertedFlag = 1
 # Flag to utilize parallelization
-parallel = 0        ## Default: 1 (Yes)
+parallel = 1        ## Default: 1 (Yes)
 nthreads = 8
 debug = 1
 
@@ -65,11 +67,15 @@ class Genome:
 
     def __init__(self, filename):
         self.filename = filename
-        self.IRDict = {}
+        self.chrDict = {}
         self.IRFastaFilename = 'invertedRepeats/Inverted_Seqs.fa' 
         self.IRAlignmentFilename = 'invertedRepeats/Inverted_Alings.inv'
         
         self.genomeSeqList = self.readFasta(self.filename)
+
+        # Create an empty list in IRList for as many chromosomes
+        # exist
+        self.IRList = [[] for i in range(len(self.chrDict))]
 
         # Build the bowtie index if it does not exist yet
         self.indexFilename = self.buildBowtieIndex(genomeFilename)
@@ -98,8 +104,15 @@ class Genome:
         # there are some sequence names with no sequence on the next line   
         for entry in wholeFile.split('>')[1:]:
             chromoInfo = entry.partition('\n')
-            # Strip > and newline character from the ID
-            seqID = chromoInfo[0].split()[0]
+
+            # We will call the sequence identifier of the FASTA file
+            # the chrID. Technically, this does not have to be a chromosome
+            # if the user's file does not contain full chromosomes, but
+            # the variable name will at least indicate that
+            chrID = chromoInfo[0].split()[0]
+            # Add seqID to chrDict for indexing of chromosomes
+            self.chrDict[chrID] = count
+
             # Strip the newline character from the sequence
             sequence = chromoInfo[2].replace('\n','').strip()
 
@@ -108,7 +121,7 @@ class Genome:
             # If the sequence exists, append the sequence ID and the
             # matching sequence to fastaList 
             if(sequence):
-                fastaList.append((seqID, sequence))
+                fastaList.append((chrID, sequence))
 
             else:
                 emptyCount += 1
@@ -269,9 +282,6 @@ class Genome:
 
         # Set a counter to process each inverted repeat by line number
         counter = 0
-        # Initialize counter for alignments removed by internal
-        # loop filter
-#        internalLoopCounter = 0
 
         # If einverted was run, open the output alignment file to write
         # the results to
@@ -283,7 +293,7 @@ class Genome:
         for filename in IRAlignmentFilenamesList:
             with open(filename) as alignmentFile:
                 # Loop through the alignment files to add them to the
-                # merged file and add them to the IRDict dictionary
+                # merged file and add them to IRList
 
                 failFlag = 0
                 toWriteList = []
@@ -309,7 +319,7 @@ class Genome:
                     # readjusted
                     if(counter % 5 == 1):
 
-                        name = parsedLine[0].split(':')[0]
+                        chrID = parsedLine[0].split(':')[0]
                         score = int(parsedLine[2].split(':')[0])
                         matches, totalBases = map(int, parsedLine[3].split('/'))
                         percMatch = round(float(matches)/totalBases, 3)
@@ -333,13 +343,6 @@ class Genome:
                     # the 3rd line of the alignment.
                     elif(counter % 5 == 3):
                         alignmentIndicators = line.lstrip().rstrip()
-                        # If the alignment shows more than 5 spaces in a row,
-                        # that indicates that there are more than 5 games
-                        # in a row in this alignment. Set the fail flag to
-                        # 1 if this occurs
-#                        if(len(line.lstrip().rstrip().split('      ')) > 1):
-#                            failFlag = 1
-#                            internalLoopCounter += 1
 
                     # If the current line counter % 5 is 4, the 3'
                     # repeat start and end coordinates will be contained
@@ -348,23 +351,20 @@ class Genome:
                         start3 = int(parsedLine[2])
                         hairpin3 = parsedLine[1].upper()
                         end3 = int(parsedLine[0])
-                        loop = int(start3)-int(end5)
+                        loop = int(start3) - int(end5) - 1
 
-                        # Add the inverted repeat to IRDict
-                        if(name in self.IRDict):
-                            self.IRDict[name].append((start5, end5,
-                                start3, end3, loop, 'w', hairpin5,
-                                alignmentIndicators, hairpin3))
-                            self.IRDict[name].append((start5, end5,
-                                start3, end3, loop, 'c', hairpin5,
-                                alignmentIndicators, hairpin3))
-                        else:
-                            self.IRDict[name] = [(start5, end5, start3,
-                                end3, loop, 'w', hairpin5,
-                                alignmentIndicators, hairpin3)]
-                            self.IRDict[name].append((start5, end5,
-                                start3, end3, loop, 'c', hairpin5,
-                                alignmentIndicators, hairpin3))
+                        # Get the index of the chromosome to add the
+                        # inverted repeat to
+                        index = self.chrDict[chrID]
+
+                        # Add the inverted repeat to the appropriate
+                        # list within IRList
+                        self.IRList[index].append((start5, end5,
+                            start3, end3, loop, 'w', hairpin5,
+                            alignmentIndicators, hairpin3))
+                        self.IRList[index].append((start5, end5,
+                            start3, end3, loop, 'c', hairpin5,
+                            alignmentIndicators, hairpin3))
 
                         if(not failFlag and runEInvertedFlag):
                             for entry in toWriteList:
@@ -384,91 +384,32 @@ class Genome:
             print("Combined files '%s and %s'\nDeleting temp files" %\
                 (self.IRAlignmentFilename, self.IRFastaFilename))
 
-#            print("Inverted repeats removed by internal loop filter: %s" %\
-#                internalLoopCounter)
-
             # Combine the inverted repeats FASTA and alignmenet filenames
             # lists to delete all of these temp files
             garbage = IRFastaFilenamesList + IRAlignmentFilenamesList
             for file in garbage:
                 os.remove(file)
 
-    def mapper(self, indexFilename, libraryFilename):
-        """
-        Map small RNAs to the provided index file
-
-        Args:
-            indexFilename: Path and name of the index for the genome. 
-                This will be a fragment if fragFasta was run
-            libraryFilename: Path and name of the library fasta file
-                to be mapped to the genome
-        Returns:
-            Filename of mapped data
-
-        """
-
-        # Strip the filename of its folders and create the output map
-        # name with that stripped filename in the libs folder
-        indexNameStripped = os.path.basename(indexFilename)
-
-        if(not os.path.isdir("libs")):
-            os.mkdir("libs")
-
-        # If running in parallel, a fragment count must be added to the 
-        # map filename.
-        if(parallel == 1):
-            # Get the fragment number by splitting the filename and using
-            # the last item. This is the format provided by the fragmentor
-            # function so this should always work unless I change that code
-            # later on
-            fragNumber = indexNameStripped.split('_')[-1]
-            outputFilename = '%s_%s.map' % ("".join(os.path.splitext(
-                libraryFilename)[:-1]), fragNumber)
-
-        else:
-            outputFilename = '%s.map' % "".join(os.path.splitext(
-                libraryFilename)[:-1])
-
-        logFilename = "%s_bowtie.log" % os.path.splitext(outputFilename)[:-1] 
-
-        # Run bowtie
-        print("Mapping small RNAs to the genome files for %s" %\
-            (libraryFilename))
-
-        with open(logFilename, 'w') as logFile:
-            # Run bowtie with the following options:
-            # -a to report all valid alignments as we want multihits
-            # -m 20 to suppress all alignments with more than 20 matches
-            # to the genome. We expect few multi-matches to the genome
-            # --best and --strata ensures only the best alignments are reported
-            # and so that less optimum but passable alignments do not appear
-            # -v 1 Only allow one mismatch
-            # --sam-nohead removes the header from the SAM file. This is useful
-            # because we have to merge the fragment alignments for parallel
-            # runs
-            # --no-unal suppresses sequences with no alignemnt. This helps to
-            # keep the map file manageable and filter out these sequences
-            # earlier for efficiency
-            ### Note that the output of bowtie is send to stderr for some 
-            ### which is why this log flie goes there
-            subprocess.call([bowtiePath, indexFilename, "-f", libraryFilename,
-                "-a", "-m 20", "--best", "--strata", "-p", str(nthreads),
-                "-v 1", "-S", outputFilename, "--sam-nohead", "--no-unal"], 
-                stderr = logFile)
-
-        logFile.close()
-
-        return(outputFilename, logFilename)
-
 class Library:
     """
     Class grouping of library functions and data structures
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, chrDict):
         self.filename = filename
         self.fastaFilename = "".join(self.filename.split('.')[:-1]) + '.fa'
         self.libDict = self.readTagCount()
+        # Create the mapped filename for this library
+        self.mapFilename = "%s.map" % ("".join(os.path.splitext(
+            self.filename)[0]))
+
+        # Using chrDict from the genome file, create a tuple of multiple
+        # dictionaries. Each dictionary in the tuple will represent a 
+        # chromosome. Within these dictionaries are keys 'w' and 'c' for
+        # each strand of the chromosome. These will then contain empty
+        # ditionaries as values which will be populated by positions and
+        # the sequences of the reads that map there.
+        self.mappedList = [{'w': {}, 'c': {}} for i in range(len(chrDict))]
 
     def readTagCount(self):
         """
@@ -521,80 +462,125 @@ class Library:
 
         return(libDict)
 
-def createMappedDict(mapFilename, libDict):
-    """
-    Create a dictionary to hold the mapped sRNAs for simple querying
+    def mapper(self, indexFilename):
+        """
+        Map small RNAs to the provided index file
 
-    Args:
-        mapFilename: The name of the map file
-        libDict: The entire library dictionary to be updated with hit counts
+        Args:
+            indexFilename: Path and name of the index for the genome. 
+                This will be a fragment if fragFasta was run
+        Returns:
+            Filename of mapped data
 
-    Returns:
-        Dictionary of the mapped file with chromosomes as a key and 
-        subdictionary for each chromosome. This subdictionary contains another
-        subdictionary with strand as the key. These subdictionaries have a
-        position as a key and then a list as values. That list contains
-        all tags that map to that same position
+        """
 
-    """
+        # Strip the filename of its folders and create the output map
+        # name with that stripped filename in the libs folder
+        indexNameStripped = os.path.basename(indexFilename)
 
-    # Prior to mapping, loop through the map file and create a dictionary
-    # with the location that the tags map to as the key, and then a list
-    # of tags that map to that location
-    mappedDict = {}
-    with open(mapFilename, 'r') as inFile:
-        for line in inFile:
-            flag = line.split('\t')[1]
-            chrID = line.split('\t')[2]
-            position = int(line.split('\t')[3])
-            sequence = line.split('\t')[9]
+        if(not os.path.isdir("libs")):
+            os.mkdir("libs")
 
-            # If the flag is a star, it means that it did not align
-            # and thus must we break from the loop here
-            if(flag == '*'):
-                pass
+        outputFilename = '%s.map' % "".join(os.path.splitext(
+            self.fastaFilename)[:-1])
 
-            # If the 16th bit flag is not set, the strand is w
-            elif(not int(flag) & 0b10000):
-                strand = 'w'
+        logFilename = "%s_bowtie.log" % os.path.splitext(outputFilename)[:-1] 
 
-            # If the 16th bit of the flag is set, the strand is c. We 
-            # thus need to make the sequence the reverse complement to
-            # ensure we can find the right sequence later
-            elif(int(flag) & 0b10000):
-                strand = 'c'
-                sequence = sequence.translate(str.maketrans(
-                    "ACGT","TGCA"))[::-1]
-                # If the strand is c, we need to subtract the length of
-                # the sequence for its real start position
-                position -= len(sequence) - 1
+        # Run bowtie
+        print("Mapping small RNAs to the genome files for %s" %\
+            (self.fastaFilename))
 
-            # If the current chromosome hasn't been seen yet, create an
-            # dictionary for it within mappedDict
-            if(chrID not in mappedDict):
-                mappedDict[chrID] = {'w': {}, 'c': {}}
+        with open(logFilename, 'w') as logFile:
+            # Run bowtie with the following options:
+            # -a to report all valid alignments as we want multihits
+            # -m 20 to suppress all alignments with more than 20 matches
+            # to the genome. We expect few multi-matches to the genome
+            # --best and --strata ensures only the best alignments are reported
+            # and so that less optimum but passable alignments do not appear
+            # -v 0 Allow no mismatch
+            # --sam-nohead removes the header from the SAM file. This is useful
+            # because we have to merge the fragment alignments for parallel
+            # runs
+            # --no-unal suppresses sequences with no alignemnt. This helps to
+            # keep the map file manageable and filter out these sequences
+            # earlier for efficiency
+            ### Note that the output of bowtie is send to stderr for some 
+            ### which is why this log flie goes there
+            subprocess.call([bowtiePath, indexFilename, "-f",
+                self.fastaFilename, "-a", "-m 20", "--best", "--strata", "-p",
+                str(nthreads), "-v 0", "-S", outputFilename, "--sam-nohead",
+                "--no-unal"], stderr = logFile)
 
-            # If the position is not yet in mappedDict, create an entry
-            # in the dictionary
-            if(position not in mappedDict[chrID]):
-                mappedDict[chrID][strand][position] = [sequence]
+        logFile.close()
 
-            # If the position already exists in the mappedDict, append
-            # the sequence to the existing entry
-            else:
-                mappedDict[chrID][strand][position].append(sequence)
+        return(outputFilename, logFilename)
 
-            # Increment the hits variable for this sequence in libDict
-            # to indicate its number of mapped locations found
-            libDict[sequence][1] += 1
+    def createMappedList(self, chrDict):
+        """
+        Create a dictionary to hold the mapped sRNAs for simple querying
 
-    return(mappedDict)
+        Args:
+            chrDict: This is the genome chromosome dictionary with the
+                index position for the chromosome so that mappedList
+                and List can be linked by index positions
+
+        Returns:
+            Dictionary of the mapped file with chromosomes as a key and 
+            subdictionary for each chromosome. This subdictionary contains
+            another subdictionary with strand as the key. These
+            subdictionaries have a position as a key and then a list as
+            values. That list contains all tags that map to that same
+            position
+
+        """
+
+        with open(self.mapFilename, 'r') as inFile:
+            for line in inFile:
+                flag = line.split('\t')[1]
+                chrID = line.split('\t')[2]
+                position = int(line.split('\t')[3])
+                sequence = line.split('\t')[9]
+
+                # If the flag is a star, it means that it did not align
+                # and thus must we break from the loop here
+                if(chrID == '*'):
+                    continue
+
+                # If the 16th bit flag is not set, the strand is w
+                elif(not int(flag) & 0b10000):
+                    strand = 'w'
+
+                # If the 16th bit of the flag is set, the strand is c. We 
+                # thus need to make the sequence the reverse complement to
+                # ensure we can find the right sequence later
+                elif(int(flag) & 0b10000):
+                    strand = 'c'
+                    sequence = sequence.translate(str.maketrans(
+                        "ACGT","TGCA"))[::-1]
+
+                # Get the index of the chromosome to add to the appropriate
+                # index of mappedList
+                chrIndex = chrDict[chrID]
+
+                # If the position is not yet in this dictionary, create an
+                # entry for it
+                if(position not in self.mappedList[chrIndex][strand]):
+                    self.mappedList[chrIndex][strand][position] = [sequence]
+
+                # If the position already exists in this dictionary,
+                # just append the sequence to the position list
+                else:
+                    self.mappedList[chrIndex][strand][position].append(sequence)
+
+                # Increment the hits variable for this sequence in libDict
+                # to indicate its number of mapped locations found
+                self.libDict[sequence][1] += 1
 
 def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
         IRMappedTags):
 
     """
-    This function will seve a few purposes. First, we need to track the
+    This function will serve a few purposes. First, we need to track the
     total abundance of sRNAs that map to each arm of an inverted repeat.
     It will then add the sequence and abundance of that sequence to a
     variable, provided the sequence length is between 18 and 26 (only
@@ -604,7 +590,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
     Args:
         position: The position of the tags that are present at this location
         subMappedDict: A dictionary of mapped tags and their mapping strands
-            at each position. This is the subdictionary of mappedDict 
+            at each position. This is the subdictionary of mappedList
             to avoid passing chrID and IRStrand
         IREnd: The last position of the inverted repeat
         libDict: The entire library dictionary to be queried for abundances
@@ -621,7 +607,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
 
     totalAbun = 0
 
-    # Pull all tags that map to this position from the sub mappedDict
+    # Pull all tags that map to this position 
     tagList = [mappedTags for mappedTags in \
         subMappedDict[position]]
 
@@ -632,13 +618,16 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
         hits = libDict[sequence][1]
         hitsNormalizedAbundance = abundance/hits
 
+        # We need a quick check to determine if the sequence extends beyond
+        # the IR Arm. If it does, we cannot add it as a mapping tag. This
+        # should only be true if there are two tags that map to a position
+        # where one sequence is longer than the other(s) and extends into
+        # the loop or outside the precursor
+        if(position + len(sequence) - 1 > IREnd):
+            continue
+
         # Add the HNA to the total abundance
         totalAbun += hitsNormalizedAbundance
-
-        # If the sequence extends into beyond the range of the IR arm,
-        # skip the tag because it cannot be a true candidate
-        if(len(sequence) + position > IREnd):
-            continue
 
         # If the tag is beween 18 and 26 nt in length, add
         # it its sequence and HNA to IRMappedTags.
@@ -653,7 +642,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
 
     return(totalAbun)
 
-def mapSRNAsToIRs(mapFilename, IRDict, libDict, mirnasList):
+def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
     """
     Map small RNAs to the inverted repeats. This will first read in
     the map file (merged mapfile if run in parallel) and identify any
@@ -662,9 +651,10 @@ def mapSRNAsToIRs(mapFilename, IRDict, libDict, mirnasList):
     Do not count small RNAs that map to the loop of the precursor
 
     Args:
-        mapFilename: The name of the mapfile
-        IRDict: Dictionary of the inverted repeats
-        libDict: Dictionary of the library tags and their abundances
+        IRList: List of the inverted repeats in one chromosome
+        mappedDict: Dictionary of positions and sequences that map to those
+            positions in one chromosome
+        libDict: Dictionary of all library tags and their abundances
 
     """
 
@@ -672,62 +662,56 @@ def mapSRNAsToIRs(mapFilename, IRDict, libDict, mirnasList):
     listOfMirnas = []
 
     # Initialize a dictionary to hold the precursors
-    precursorDict = {}
+    precursorsList = []
 
-    # Create a dictionary with the sequence of all tags that
-    # map to a position on every chromosome
-    mappedDict = createMappedDict(mapFilename, libDict)
+    # Loop through the inverted repeats to find all tags within our
+    # length cutoffs that map to them
+    for invertedRepeat in IRList:
+        # Get the strand of the inverted repeat and various other
+        # information about the inverted repeat
+        start5 = invertedRepeat[0]
+        end5 = invertedRepeat[1]
+        start3 = invertedRepeat[2]
+        end3 = invertedRepeat[3]
+        loopStart = end5 + 1
+        loopEnd = start3 - 1
+        IRStrand = invertedRepeat[5]
 
-    # Loop through each chromosome's inverted repeats to find all tags
-    # within our length cutoffs that map to them
-    for chrID, IRList in IRDict.items():
-        # If we are running this function in parallel, we need to ensure
-        # that the IRDict is only using chromosomes that are in the
-        # current map file to prevent KeyErrors. If it does not exist,
-        # we will skip to the next chromosome
-        if(chrID not in mappedDict.keys()):
-            continue
+        # Initialize dictionaries to store postions of sRNAs that
+        # map to inverted repeats
+        IRMappedTags5 = {}
+        IRMappedTags3 = {}
 
-        # Loop through the list of inverted repeats in each chromosome
-        # and find if sRNAs map in the repeats
-        for invertedRepeat in IRList:
-            # Get the strand of the inverted repeat and various other
-            # information about the inverted repeat
-            start5 = invertedRepeat[0]
-            end5 = invertedRepeat[1]
-            start3 = invertedRepeat[2]
-            end3 = invertedRepeat[3]
-            loopStart = end5 + 1
-            loopEnd = start3 - 1
-            IRStrand = invertedRepeat[5]
+        # Initialize a list to store the positions that tags map to
+        # within the loop so that we can get their abundance
+        mappedLoopPositions = []
 
-            # Initialize dictionaries to store postions of sRNAs that
-            # map to inverted repeats
-            IRMappedTags5 = {}
-            IRMappedTags3 = {}
+        # Initialize variables to store the total abundance of tags
+        # that map to the precursor
+        totalAbun5 = 0
+        totalAbun3 = 0
+        loopAbun = 0
 
-            # Initialize a list to store the positions that tags map to
-            # within the loop so that we can get their abundance
-            mappedLoopPositions = []
-
-            # Initialize variables to store the total abundance of tags
-            # that map to the precursor
-            totalAbun5 = 0
-            totalAbun3 = 0
-            loopAbun = 0
-
-            # Loop through all postiions that map to the inverted 
-            # repeats and create an entry in a dictionary on the
-            # 5' and 3' variables, respectively. Initialize values
-            # (which will be abundance) to an empty list. We use a list
-            # as it is possible two tags map to the same location, so we
-            # need to leave the option open that this will happen
-            for position, mappedTagList in mappedDict[chrID][IRStrand].items():
+        # Loop through all postiions that map to the inverted 
+        # repeats and create an entry in a dictionary on the
+        # 5' and 3' variables, respectively. Initialize values
+        # (which will be abundance) to an empty list. We use a list
+        # as it is possible two tags map to the same location, so we
+        # need to leave the option open that this will happen
+        for position in range(start5, end3):
+            # We are looping through this dictionary in key order,
+            # so if position has passed the range of this inverted
+            # repeat, there is no point in investigating the other
+            # positions as none will fall in this range
+            if(position in mappedDict[IRStrand]):
+                # Store the value of this dictionary in mappedTagList
+                mappedTagList = mappedDict[IRStrand][position]
                 for mappedTag in mappedTagList:
                     # If the current tag maps to the 5' arm of the
                     # inverted repeat, add the position to the 
                     # IRMappedTags5 dictionary
-                    if(position >= start5 and position+len(mappedTag) <= end5):
+                    if(position >= start5 and position+len(mappedTag) - 1 
+                            <= end5):
                         IRMappedTags5[position] = []
                         #if(mappedTag in mirnasList):
                         #    mirnasCount += 1
@@ -737,7 +721,8 @@ def mapSRNAsToIRs(mapFilename, IRDict, libDict, mirnasList):
                     # If the current tag maps to the 3' arm of the
                     # inverted repeat, add the position to the 
                     # IRMappedTags3 dictionary
-                    if(position >= start3 and position+len(mappedTag) <= end3):
+                    elif(position >= start3 and position+len(mappedTag) - 1
+                            <= end3):
                         IRMappedTags3[position] = []
                         #if(mappedTag in mirnasList):
                         #    mirnasCount += 1
@@ -746,119 +731,124 @@ def mapSRNAsToIRs(mapFilename, IRDict, libDict, mirnasList):
 
                     # If the tag maps to the loop of the IR, we
                     # only need to 
-                    if(position >= loopStart and position <= loopEnd):
+                    elif(position + len(mappedTag) - 1 >= loopStart and 
+                            position <= loopEnd):
                         mappedLoopPositions.append(position)
 
-            # If there are tags that map to both stems of the
-            # inverted repeat, the inverted repeat will need to be
-            # saved as a candidate precursor miRNA
-            if(IRMappedTags5 and IRMappedTags3):
-                # Get the positions of tags that map to the 5' and 3' ends
-                # of the candidate precursors
-                position5List = IRMappedTags5.keys()
-                position3List = IRMappedTags3.keys()
+        # If there are tags that map to both stems of the
+        # inverted repeat, the inverted repeat will need to be
+        # saved as a candidate precursor miRNA
+        if(IRMappedTags5 and IRMappedTags3):
+            # Get the positions of tags that map to the 5' and 3' ends
+            # of the candidate precursors
+            position5List = IRMappedTags5.keys()
+            position3List = IRMappedTags3.keys()
 
-                # Initialize a list to track positions that are not miRNA
-                # or miRNA* candidates
-                positionsToPop = []
+            # Initialize a list to track positions that are not miRNA
+            # or miRNA* candidates
+            positionsToPop = []
 
-                # Loop through the positions that have tags mapping to the
-                # 5' arm of an inverted repeat to get the sequences and
-                # abundances
-                for position in position5List:
-                    # Find the sequences and abundances of all tags that
-                    # map to an inverted repeat
-                    totalAbun5 += findOverlappingSeqsAndAbuns(position,
-                        mappedDict[chrID][IRStrand], end5, libDict,
-                        IRMappedTags5)
+            # Loop through the positions that have tags mapping to the
+            # 5' arm of an inverted repeat to get the sequences and
+            # abundances
+            for position in position5List:
+                # Find the sequences and abundances of all tags that
+                # map to an inverted repeat
+                totalAbun5 += findOverlappingSeqsAndAbuns(position,
+                    mappedDict[IRStrand], end5, libDict,
+                    IRMappedTags5)
 
-                    # If no tags were added to the IRMappedTags5
-                    # dictionary at this position, tag the entry for removal
-                    # to eliminate entries with no mapping sRNAs
-                    if(not IRMappedTags5[position]):
-                        positionsToPop.append(position)
+                # If no tags were added to the IRMappedTags5
+                # dictionary at this position, tag the entry for removal
+                # to eliminate entries with no mapping sRNAs
+                if(not IRMappedTags5[position]):
+                    positionsToPop.append(position)
 
-                # Iterate through positionsToPop and remove those positions
-                # from IRMappedTags5
-                for position in positionsToPop:
-                    IRMappedTags5.pop(position, None)
+            # Iterate through positionsToPop and remove those positions
+            # from IRMappedTags5
+            for position in positionsToPop:
+                IRMappedTags5.pop(position, None)
 
-                # If all positions were popped from IRMappedTags5,
-                # there is no point in investigating the 3' arm because
-                # there can't possibly be a miRNA duplex.
-                if(not IRMappedTags5):
-                    break
+            # If all positions were popped from IRMappedTags5,
+            # there is no point in investigating the 3' arm because
+            # there can't possibly be a miRNA duplex.
+            if(not IRMappedTags5):
+                continue
 
-                # Reinitialize positionsToPop back to an empty list
-                positionsToPop = []
+            # Reinitialize positionsToPop back to an empty list
+            positionsToPop = []
 
-                # Loop through the positions that have tags mapping to the
-                # 3' arm of an inverted repeat to get the sequences and
-                # abundances
-                for position in position3List:
-                    # Find the sequences and abundances of all tags that
-                    # map to an inverted repeat
-                    totalAbun3 += findOverlappingSeqsAndAbuns(position,
-                        mappedDict[chrID][IRStrand], end3, libDict,
-                        IRMappedTags3)
+            # Loop through the positions that have tags mapping to the
+            # 3' arm of an inverted repeat to get the sequences and
+            # abundances
+            for position in position3List:
+                # Find the sequences and abundances of all tags that
+                # map to an inverted repeat
+                totalAbun3 += findOverlappingSeqsAndAbuns(position,
+                    mappedDict[IRStrand], end3, libDict,
+                    IRMappedTags3)
 
-                    # If no tags were addded to the IRMappedTags3
-                    # dictionary at this position, remove the position from 
-                    # the dictionary
-                    if(not IRMappedTags3[position]):
-                        positionsToPop.append(position)
+                # If no tags were addded to the IRMappedTags3
+                # dictionary at this position, remove the position from 
+                # the dictionary
+                if(not IRMappedTags3[position]):
+                    positionsToPop.append(position)
 
-                # Iterate through positionsToPop and remove those positions
-                # from IRMappedTags3
-                for position in positionsToPop:
-                    IRMappedTags3.pop(position, None)
+            # Iterate through positionsToPop and remove those positions
+            # from IRMappedTags3
+            for position in positionsToPop:
+                IRMappedTags3.pop(position, None)
 
-                # If after all of our checks, there are definitely tags
-                # that map to both ends of the IR repeat, we will add
-                # the precursor to precursorDict
-                if(IRMappedTags5 and IRMappedTags3):
-                    # Before finishing with this precursor, we need to 
-                    # determine the abundance of tags that map to the loop
-                    for position in mappedLoopPositions:
-                        tagList = [mappedTags for mappedTags in \
-                        mappedDict[chrID][IRStrand][position]]
+        # If after all of our checks, there are definitely tags
+        # that map to both ends of the IR repeat, we will add
+        # the precursor to findOverlappingSeqsAndAbuns
+        if(IRMappedTags5 and IRMappedTags3):
+            # Create a list of tags that map to both arms of the
+            # inverted repeat to ensure no double counting occurs
+            # when counting loop abundance. This is necessary for
+            # when two tags map to the same position, but one is 
+            # longer than the other and extends into the loop
+            IRMappedSequences = []
+            for position, mappedSeqList in IRMappedTags5.items():
+                for sequenceAbun in mappedSeqList:
+                    IRMappedSequences.append(sequenceAbun[0])
+            for position, mappedSeqList in IRMappedTags3.items():
+                for sequenceAbun in mappedSeqList:
+                    IRMappedSequences.append(sequenceAbun[0])
 
-                        # We can't just use findOverlappingSeqsAndAbuns
-                        # because it is is mapping to an IR arm, so we will
-                        # jsut use a component of that here
-                        for sequence in tagList:
-                            abundance = libDict[sequence][0]
-                            hits = libDict[sequence][1]
-                            hitsNormalizedAbundance = abundance/hits
-                            loopAbun += hitsNormalizedAbundance
+            # Before finishing with this precursor, we need to
+            # determine the abundance of tags that map to the loop
+            for position in mappedLoopPositions:
+                tagList = [mappedTags for mappedTags in \
+                mappedDict[IRStrand][position]]
 
-                    # If no precursor candidate has been identified yet for
-                    # this chromosome, initialize it in the dictionary
-                    if chrID not in precursorDict.keys():
-                        precursorDict[chrID] = [[invertedRepeat,
-                            IRMappedTags5, IRMappedTags3,
-                            totalAbun5, totalAbun3, loopAbun]]
+                # We can't just use findOverlappingSeqsAndAbuns
+                # because it is is mapping to an IR arm, so we will
+                # just use a component of that here
+                for sequence in tagList:
+                    # If the sequence is in IRMappedSequences, skip it
+                    if(sequence not in IRMappedSequences):
+                        abundance = libDict[sequence][0]
+                        hits = libDict[sequence][1]
+                        hitsNormalizedAbundance = abundance/hits
+                        loopAbun += hitsNormalizedAbundance
 
-                    # If a precursor candidate has already been identified in
-                    # this chromosome, append it to the list already in the
-                    # dictionary
-                    else:
-                        precursorDict[chrID].append([invertedRepeat,
-                            IRMappedTags5, IRMappedTags3,
-                            totalAbun5, totalAbun3, loopAbun])
+            # Add the precursor to the precursorsList
+            precursorsList.append([invertedRepeat,
+                IRMappedTags5, IRMappedTags3,
+                totalAbun5, totalAbun3, loopAbun])
 
-    print(mirnasCount)
-    print(listOfMirnas)
+    return(precursorsList)
 
-    return(precursorDict)
-
-def writePrecursors(filename, precursorDict):
+def writePrecursors(filename, chrDict, precursorsList):
     """
     Write the predicted precursors to a file with the designated file name
 
     Args:
         filename: The name of the output file
-        precursorDict: Dictionary containing all candidate precursors
+        chrDict: Dictionary of chromosomes and their corresponding indices
+            in the precursorsList
+        precursorsList: List containing all candidate precursors
 
     """
 
@@ -869,11 +859,14 @@ def writePrecursors(filename, precursorDict):
 
     # Open the output file
     with open(filename, 'w') as f:
-        # loop through the chromosomes, sorted in numerical order
-        for chrID, precursorList in sorted(precursorDict.items()):
+        for chrID in sorted(chrDict.keys()):
+            chrIndex = chrDict[chrID]
+
+            precursorSubList = precursorsList[chrIndex]
+
             # Within each chromosome, loop through each precursor
             # and extract information to write to the file
-            for precursor in precursorList:
+            for precursor in precursorSubList:
                 # Coordinates are in the 0th element of the tuple,
                 # and the dictioniary of tags mapping to the 5' and 3'
                 # arms are in the 1st and 2nd element of the tuple,
@@ -889,8 +882,8 @@ def writePrecursors(filename, precursorDict):
                 # we need to change the script a bit. Inform the user
                 # and exit
                 if(precursorCount > 99999):
-                    print("Problem: The number of precursors exceeds"\
-                        "the number of precursors Reza thought was"\
+                    print("Problem: The number of precursors exceeds "\
+                        "the number of precursors Reza thought was "\
                         "possible. Extend name from %05d to %06d")
                     sys.exit()
 
@@ -928,34 +921,29 @@ def writePrecursors(filename, precursorDict):
                         abundance = entry[1]
                         f.write('%s,%s,%s\n' % (tag, position, abundance))
 
-def findSequenceInIR(sequence, IRArm, localStart, localEnd, tagLength):
+def findSequenceInIR(sequence, IRArm, tagLength):
     """  
     If a sequence cannot be found in a simple search in an inverted repeat
-    arm, we know it is for one of two possibilities. Because we allow 1
-    mismatch in bowtie by default, we know that it is possilbe that the sRNA
-    that is mapped to this position may not be exact with the IR. Also,
-    there can be a gap in the alignment, so we must identify which case
-    (if not both) it is before proceeding
+    arm, it is because there are gaps that interrupt the sequence. Thus, we
+    must do some work to find the tag, WITH gaps, as wel as the start and
+    end positions of the tag with gaps to identify potential duplexes
 
     Args:
         sequence: Small RNA to be idenfitied in the inverted repeat
         IRArm: The aligning arm of the inverted repeat with gaps as hyphens
-        localStart: The calculated start position on the arm determined by
-            the global positions. This will be modified if gaps exist before
-            the sequence on the IR
-        localEnd: The calculated end position on the arm determined by the
-            global positions. This will be modified if gaps before AND within
-            the sequence on the IR
         tagLength: The length of the sequence
         
     Returns:
+        A tuple of the sequence with gaps, its start position, and its
+        end position on the inverted repeat arm
 
     """
 
-    # If there are gaps prior to the start positions, we need to determine
-    # an offset because they will otherwise not find the expected sequence
-    
-    # Initialize offset to 0
+    # Get the start position of the sequence on the IR arm without any
+    # gap sequences
+    localStart = IRArm.replace('-','').find(sequence)
+
+    # Initialize offset and sequence gap count to 0
     offset = 0
     gapCount = 0
 
@@ -971,7 +959,7 @@ def findSequenceInIR(sequence, IRArm, localStart, localEnd, tagLength):
         # Set the offset to the number of gaps prior to the 5' start
         # position + the current offset (important because if 
         # is a gap after the previously found offset)
-        offset = IRArm[0:localStart + \
+        offset = IRArm[:localStart + \
             offset].count('-')
 
         # If the new offset is the same as the
@@ -983,24 +971,28 @@ def findSequenceInIR(sequence, IRArm, localStart, localEnd, tagLength):
     # Initialize non gap base counts
     baseCount = 0
 
-    # Reset the sequence5 variable since it 
-    # needs to be updated
-    sequence = ''
+    # Initialize a variable to hold the sequence with gaps
+    sequenceWithGaps = ''
 
     # Initialize a counter to 0 so that we can
     # fill the new sequence variables one by one
     counter = 0
 
-    # Loop through the 5' arm of the IR to fill
+    # Loop through the arm of the IR to fill
     # sequence5 with its sequence, including
     # gaps
     while(baseCount < tagLength):
         # Store the current base as the current
         # nucleotide at this calculated position
-        base = IRArm[localStart + offset + \
-            counter]
+        try:
+            base = IRArm[localStart + offset + \
+                counter]
+        except IndexError:
+            print(sequence, localStart, offset, counter, baseCount, tagLength, localStart, localEnd)
+            print(IRArm)
+            sys.exit()
         # Add the base to the new sequence
-        sequence += base
+        sequenceWithGaps += base
 
         # If the base is not a gap, increment the
         # baseCount variable to ensure we only
@@ -1017,9 +1009,9 @@ def findSequenceInIR(sequence, IRArm, localStart, localEnd, tagLength):
         counter += 1
 
     localStart += offset
-    localEnd += offset + gapCount
+    localEnd = localStart + tagLength + gapCount
 
-    return(sequence, localStart, localEnd)
+    return(sequenceWithGaps, localStart, localEnd)
 
 def getAlign(base1, base2):
     """
@@ -1128,8 +1120,8 @@ def getAlignment(arm5, arm3, alignStart, alignEnd):
     return(matchCount, mismatchCount, wobbleCount, gapCount,
         asymmetricBulgeCount)
 
-def getVariantAbundance(mappedTagsDict, candidateTagAndAbundance,
-    candidatePosition):
+def getVariantAbundance(mappedTagsDict, candidateSequence,
+    candidatePosition, strand):
     """
     This function will serve two purposes. First, we need to get the sum of
     abundance of all eight 1 nt variants of the candidate sequence. Second,
@@ -1139,8 +1131,7 @@ def getVariantAbundance(mappedTagsDict, candidateTagAndAbundance,
     Args:
         mappedTagsDict: A dictionary with key of position and valuse of 
             tuples containing sequences and abundances of those sequences
-        candidateTagAndAbundance: A tuple of the candidate sequence
-            and candidate abundance
+        candidateTagAndAbundance: The mapped candidate sequence
         candidatePosition: The position on the mappin chromosome of the
             candidate
     Returns:
@@ -1148,49 +1139,167 @@ def getVariantAbundance(mappedTagsDict, candidateTagAndAbundance,
 
     """
 
-    #    abundance = 0
-    candidateSequence = candidateTagAndAbundance[0]
-    candidateAbundance = candidateTagAndAbundance[1]
     candidateSequenceLength = len(candidateSequence)
     variantAbundanceList = []
 
-    if(candidatePosition - 1 in mappedTagsDict):
-        for mappedTag in mappedTagsDict[candidatePosition - 1]:
-            mappedSequence = mappedTag[0]
+    if(strand == 'w'):
+        # Check if any variants exist in which the 5' is tailed by 1 nt
+        if(candidatePosition - 1 in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition - 1]:
+                mappedSequence = mappedTag[0]
 
-            # If the mapped sequence is shortened on both ends
-            if(len(mappedSequence) == candidateSequenceLength - 2):
-                if(mappedSequence == candidateSequence[1:-1]):
-#                    abundance += mappedTag[1]
-                    variantAbundanceList.append(mappedTag[1])
+                # Check for a variant if the mapped sequence is extended on
+                # both the 5' end on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength + 2):
+                    if(mappedSequence[1:-1] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 1)
 
-            # If the mapped sequence is shortened on just one end
-            elif(len(mappedSequence) == candidateSequenceLength - 1):
-                if(mappedSequence == candidateSequence[:-1] or
-                        mappedSequence == candidateSequence[1:]):
-#                    abundance += mappedTag[1]
-                    variantAbundanceList.append(mappedTag[1])
+                # Check for a variant if the mapped sequence is extended on
+                # the 5' end unchanged on the 3' end
+                elif(len(mappedSequence) == candidateSequenceLength + 1):
+                    if(mappedSequence[1:] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 2)
 
-            # If the mapped sequence is shortened on one end but
-            # extended on another end
-            elif(len(mappedSequence) == candidateSequenceLength):
-                if(mappedSequence[1:] == candidateSequence[:-1] or
-                        mappedSequence[:-1] == candidateSequence[1:]):            
-#                    abundance += mappedTag[1]
-                    variantAbundanceList.append(mappedTag[1])
+                # Check for a variant if the mapped sequence is extended on
+                # the 5' end and shortened on the 3' end
+                elif(len(mappedSequence) == candidateSequenceLength):
+                    if(mappedSequence[1:] == candidateSequence[:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 3)
 
-            # If the mapped sequence is extended on just one end
-            elif(len(mappedSequence) == candidateSequenceLength + 1):
-                if(mappedSequence[:-1] == candidateSequence or
-                        mappedSequence[1:] == candidateSequence):
-#                    abundance += mappedTag[1]
-                    variantAbundanceList.append(mappedTag[1])
+        # Check if any variants exist in which the 5' is unchanged
+        if(candidatePosition in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition]:
+                mappedSequence = mappedTag[0]
 
-            # If the mapped sequence is extended on both ends
-            elif(len(mappedSequence) == candidateSequenceLength + 2):
-                if(mappedSequence[1:-1] == candidateSequence):
-#                    abundance += mappedTag[1]
-                    variantAbundanceList.append(mappedTag[1])
+                # Check for a variant if the mapped sequence is unchanged on
+                # the 5' end and extended on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength + 1):
+                    if(mappedSequence[:-1] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 4)
+            
+                # Check for a variant if the mapped sequence is unchanged on
+                # the 5' end and shortened on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength) - 1:
+                    if(mappedSequence == candidateSequence[:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 5)
+
+        # Check if any variants exist in which the 5' is shortened
+        if(candidatePosition + 1 in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition + 1]:
+                mappedSequence = mappedTag[0]
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 5' end and extended on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength):
+                    if(mappedSequence[:-1] == candidateSequence[1:]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 6)
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 5' end and unchanged on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength - 1):
+                    if(mappedSequence == candidateSequence[1:]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 7)
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 5' end and shortened on the 3' end
+                if(len(mappedSequence) == candidateSequenceLength - 2):
+                    if(mappedSequence == candidateSequence[1:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 8)
+
+    # If the strand is c, mapping is reverse complelmented and thus 
+    # the indexing for the variant calculations will basically be the
+    # opposite of above
+    else:
+        # Check if any variants exist in which the 3' is tailed
+        if(candidatePosition - 1 in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition - 1]:
+                mappedSequence = mappedTag[0]
+
+                # Check for a variant if the mapped sequence is extended on
+                # both the 3' end on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength + 2):
+                    if(mappedSequence[1:-1] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 1)
+
+                # Check for a variant if the mapped sequence is extended on
+                # the 3' end unchanged on the 5' end
+                elif(len(mappedSequence) == candidateSequenceLength + 1):
+                    if(mappedSequence[:-1] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 2)
+
+                # Check for a variant if the mapped sequence is extended on
+                # the 3' end and shortened on the 5' end
+                elif(len(mappedSequence) == candidateSequenceLength):
+                    if(mappedSequence[:-1] == candidateSequence[1:]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 3)
+
+        # Check if any variants exist in which the 3' is unchanged
+        if(candidatePosition in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition]:
+                mappedSequence = mappedTag[0]
+
+                # Check for a variant if the mapped sequence is unchanged on
+                # the 3' end and extended on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength + 1):
+                    if(mappedSequence[1:] == candidateSequence):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 4)
+            
+                # Check for a variant if the mapped sequence is unchanged on
+                # the 3' end and shortened on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength) - 1:
+                    if(mappedSequence == candidateSequence[1:]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 5)
+
+        # Check if any variants exist in which the 3' is shortened
+        if(candidatePosition + 1 in mappedTagsDict):
+            # Loop through all tags that map to this location to identify
+            # any potential variants for this case
+            for mappedTag in mappedTagsDict[candidatePosition + 1]:
+                mappedSequence = mappedTag[0]
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 3' end and extended on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength):
+                    if(mappedSequence[1:] == candidateSequence[:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 6)
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 3' end and unchanged on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength - 1):
+                    if(mappedSequence == candidateSequence[:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 7)
+
+                # Check for a variant if the mapped sequence is shortened on
+                # the 3' end and shortened on the 5' end
+                if(len(mappedSequence) == candidateSequenceLength - 2):
+                    if(mappedSequence == candidateSequence[1:-1]):
+                        variantAbundanceList.append(mappedTag[1])
+#                        print(mappedSequence, mappedTag[1], 8)
 
     if(not variantAbundanceList):
         return([0])
@@ -1198,7 +1307,7 @@ def getVariantAbundance(mappedTagsDict, candidateTagAndAbundance,
     else:
         return(variantAbundanceList)
 
-def filterPrecursors(precursorDict, overhang):
+def filterPrecursors(precursorsList, overhang):
     """
     This function will perform the sRNA mapping and abundance filters.
     It will first try to find a miRNA and miRNA* pair by identifying
@@ -1206,7 +1315,7 @@ def filterPrecursors(precursorDict, overhang):
     splits of the c and w strand if there are tags that map to both
 
     Args:
-        precursorDict: Dictionary of precursors with the sRNAs that
+        precursorsList: List of precursors with the sRNAs that
             map to the precursors
         overhang: Maximum length of overhang that a duplex can have
 
@@ -1223,308 +1332,240 @@ def filterPrecursors(precursorDict, overhang):
 
     # Begin to loop though all of the candidate precursors for the
     # various filters. Each loop begins on the chromosome dictionary
-    for chrID, precursorList in sorted(precursorDict.items()):
-        for precursor in precursorList:
-            # Initialize a flag for if the 5' or 3' end of the precursor
-            # contains a candidate miRNA
-            is3Candidate = False
-            is5Candidate = False
+    for precursor in precursorsList:
+        # Initialize a flag for if the 5' or 3' end of the precursor
+        # contains a candidate miRNA
+        is3Candidate = False
+        is5Candidate = False
 
-            # Store various elements of the precursor dictionary values
-            # for quick accession
-            name = precursor[0]
-            start5 = precursor[1][0]
-            end5 = precursor[1][1]
-            start3 = precursor[1][2]
-            end3 = precursor[1][3]
-            strand = precursor[1][5]
-            arm5 = precursor[1][6]
-            alignmentIndicators = precursor[1][7]
-            arm3 = precursor[1][8]
-            totalAbun5 = precursor[4]
-            totalAbun3 = precursor[5]
-            loopAbun = precursor[6]
- 
-            # Begin a series of loops to identify if there are any tags on
-            # the 5' and 3' strands that overlap within a short, user defined
-            # overhang
-            for candidate5Pos, mappedTagList5 in precursor[2].items():
-                for mapped5Tag in mappedTagList5:
-                    # Get the length of the 5' candidate tag so that we can
-                    # determine local positions on the precursors
-                    tag5Length = len(mapped5Tag[0])
-                    tag5Abun = mapped5Tag[1]
+        # Store various elements of the precursor dictionary values
+        # for quick accession
+        name = precursor[0]
+        start5 = precursor[1][0]
+        end5 = precursor[1][1]
+        start3 = precursor[1][2]
+        end3 = precursor[1][3]
+        strand = precursor[1][5]
+        arm5 = precursor[1][6]
+        alignmentIndicators = precursor[1][7]
+        arm3 = precursor[1][8]
+        totalAbun5 = precursor[4]
+        totalAbun3 = precursor[5]
+        loopAbun = precursor[6]
 
-                    # If the length of the tag is not between 20 and 24,
-                    # just move to the next tag. We do this here because
-                    # we have to store tags that are 1 nt variants of
-                    # candidate miRNA or miRNA* sequences
-                    if(tag5Length < 20 or tag5Length > 24):
-                        continue
+        # Begin a series of loops to identify if there are any tags on
+        # the 5' and 3' strands that overlap within a short, user defined
+        # overhang
+        for candidate5Pos, mappedTagList5 in precursor[2].items():
+            for mapped5Tag in mappedTagList5:
+                # Get the length of the 5' candidate tag so that we can
+                # determine local positions on the precursors
+                tag5Length = len(mapped5Tag[0])
+                tag5Abun = mapped5Tag[1]
 
-                    local5Start = candidate5Pos - start5
-                    local5End = local5Start + tag5Length
+                # If the length of the tag is not between 20 and 24,
+                # just move to the next tag. We do this here because
+                # we have to store tags that are 1 nt variants of
+                # candidate miRNA or miRNA* sequences
+                if(tag5Length < 20 or tag5Length > 24):
+                    continue
 
-                    # If the strand is w, the sequence will require no
-                    # modifications
-                    if(strand == 'w'):
-                        sequence5 = mapped5Tag[0]
+                # If the strand is w, the sequence will require no
+                # modifications
+                if(strand == 'w'):
+                    sequence5 = mapped5Tag[0]
 
-                    # If the strand is c, we need to reverse complement
-                    # the mapped sequence so that we can find it on the
-                    # IR arm
-                    else:
-                        sequence5 = mapped5Tag[0].translate(
-                            str.maketrans("ACGT","TGCA"))[::-1]
+                # If the strand is c, we need to reverse complement
+                # the mapped sequence so that we can find it on the
+                # IR arm
+                else:
+                    sequence5 = mapped5Tag[0].translate(
+                        str.maketrans("ACGT","TGCA"))[::-1]
 
-                    # If we are unable to find the sequences in the
-                    # IR arm, we know it is for one of two     
-                    # possibilities. Because we allow 1 mismatch in 
-                    # bowtie by default, we know that it is possilbe
-                    # that the sRNA that is mapped to this position
-                    # may not be exact with the IR. Also, there can
-                    # be a gap in the alignment, so we must identify
-                    # which case (if not both) it is before proceeding
-                    if(sequence5 not in arm5):
-                        sequence5, local5Start, local5End = \
-                            findSequenceInIR(sequence5, arm5,
-                            local5Start, local5End, tag5Length)
+                oldSequence5 = sequence5
 
-                    else:
-                        local5Start = arm5.find(sequence5)
-                        local5End = local5Start + tag5Length
+                # If we are unable to find the sequences in the
+                # IR arm, we know it is for one of two     
+                # possibilities. Because we allow 1 mismatch in 
+                # bowtie by default, we know that it is possilbe
+                # that the sRNA that is mapped to this position
+                # may not be exact with the IR. Also, there can
+                # be a gap in the alignment, so we must identify
+                # which case (if not both) it is before proceeding
+                if(sequence5 not in arm5):
+                    sequence5, local5Start, local5End = \
+                        findSequenceInIR(sequence5, arm5, tag5Length)
 
-                    # Loop through all mapped tags in the 3' dictionary to
-                    # identify any candidate miRNA:miRNA* pairs with the
-                    # current 5' mapped tag
-                    for candidate3Pos, mappedTagList3 in precursor[3].items():
-                        for mapped3Tag in mappedTagList3:
-                            # Get the length of the 3' candidate tag so that
-                            # we can determine local positions on the
-                            # precursor for mapping comparisons. A candidate
-                            # will be recorded if a miRNA:miRNA* pair can
-                            # be identified
-                            tag3Length = len(mapped3Tag[0])
-                            tag3Abun = mapped3Tag[1]
+                # If the sequence can be found, update the local positions
+                # as they may be shifted due to gaps prior
+                else:
+                    local5Start = arm5.find(sequence5)
+                    local5End = local5Start + tag5Length - 1
 
-                            # If the length of the tag is not between 20 and
-                            # 24, just move to the next tag. We do this here
-                            # because we have to store tags that are 1 nt
-                            # variants of candidate miRNA or miRNA* sequences
-                            if(tag3Length < 20 or tag3Length > 24):
-                                continue
+                # Check to confirm that the sequence with gaps is the
+                # same sequence as before
+                if(oldSequence5 != sequence5.replace('-','')):
+                    print("findSequenceInIR messed up for %s. "\
+                        "Contact Reza to debug" % oldSequence5)
+                    print(name, oldSequence5, sequence5, local5Start, local5End)
+                    sys.exit()
 
-                            local3End = end3 - candidate3Pos + 1
-                            local3Start = local3End - tag3Length
+                # Loop through all mapped tags in the 3' dictionary to
+                # identify any candidate miRNA:miRNA* pairs with the
+                # current 5' mapped tag
+                for candidate3Pos, mappedTagList3 in precursor[3].items():
+                    for mapped3Tag in mappedTagList3:
+                        # Get the length of the 3' candidate tag so that
+                        # we can determine local positions on the
+                        # precursor for mapping comparisons. A candidate
+                        # will be recorded if a miRNA:miRNA* pair can
+                        # be identified
+                        tag3Length = len(mapped3Tag[0])
+                        tag3Abun = mapped3Tag[1]
 
-                            # If the strand is w, the sequence needs to be
-                            # reversed because it is on the 3' arm of the IR
-                            if(strand == 'w'):
-                                sequence3 = mapped3Tag[0][::-1]
+                        # If the length of the tag is not between 20 and
+                        # 24, just move to the next tag. We do this here
+                        # because we have to store tags that are 1 nt
+                        # variants of candidate miRNA or miRNA* sequences
+                        if(tag3Length < 20 or tag3Length > 24):
+                            continue
 
-                            # If the strand is c, the sequence needs to be
-                            # complemented (but not reversed) because it is
-                            # on the 3' arm of the IR, but the reverse strand
-                            # of the genome
-                            else:
-                                sequence3 = (mapped3Tag[0].translate(
-                                    str.maketrans("ACGT","TGCA")))
+                        # If the strand is w, the sequence needs to be
+                        # reversed because it is on the 3' arm of the IR
+                        if(strand == 'w'):
+                            sequence3 = mapped3Tag[0][::-1]
 
-                            # If we are unable to find the sequences in the
-                            # IR arm, we need to find the alignment sequence,
-                            # start, and end positions
-                            if(sequence3 not in arm3):
-                                sequence3, local3Start, local3End = \
-                                    findSequenceInIR(sequence3, arm3,
-                                    local3Start, local3End, tag3Length)
+                        # If the strand is c, the sequence needs to be
+                        # complemented (but not reversed) because it is
+                        # on the 3' arm of the IR, but the reverse strand
+                        # of the genome
+                        else:
+                            sequence3 = (mapped3Tag[0].translate(
+                                str.maketrans("ACGT","TGCA")))
 
-                            else:
-                                local3Start = arm3.find(sequence3)
-                                local3End = local3Start - tag3Length
+                        oldSequence3 = sequence3
 
+                        # If we are unable to find the sequences in the
+                        # IR arm, we need to find the alignment sequence,
+                        # start, and end positions
+                        if(sequence3 not in arm3):
+                            sequence3, local3Start, local3End = \
+                                findSequenceInIR(sequence3, arm3, tag3Length)
+
+                        else:
+                            local3Start = arm3.find(sequence3)
+                            local3End = local3Start + tag3Length - 1
+
+                        # Check to confirm that the sequence with gaps is
+                        # the same sequence as before
+                        if(oldSequence3 != sequence3.replace('-','')):
+                            print("findSequenceInIR messed up for %s. "\
+                                "Contact Reza to debug" % oldSequence3)
+                            print(name, oldSequence3, sequence3, local3Start, local3End)
+                            sys.exit()
+
+                        # If there is a 3' overhang on either the sequence,
+                        # we have a candidate duplex and will investigate
+                        # it further
+                        if((local5End - local3End == overhang) and (
+                            local5Start - local3Start == overhang)):
+                            # Because we can have overhangs, the alignment
+                            # should start and end at the postiions just
+                            # prior to the overhang
+                            alignStart = max(local5Start, local3Start)
+                            alignEnd = min(local5End, local3End)
+
+                            # Get the einverted alignment for the two
+                            # sequences
+                            matchCount, mismatchCount, wobbleCount,\
+                                gapCount, asymmetricBulgeCount = \
+                                getAlignment(arm5, arm3, alignStart,
+                                alignEnd)
                             
+                            # If the alignment between the overlapping
+                            # regions of the miRNA and miRNA* do not
+                            # exceed our alignment filters, add the
+                            # duplex to the precursorsWithDuplex filter
+                            if(gapCount + mismatchCount + (wobbleCount * .5) 
+                                   #<= 5 and asymmetricBulgeCount <= 3):
+                                   <= 5 and asymmetricBulgeCount <= 3):
 
-                            # If the 5' and 3' sequences align with one another
-                            # within the alotted overhang, it is a candidate
-                            if((local5End - local3End >= 0 and local5End -
-                                local3End <= overhang) and (local5Start -
-                                local3Start > 0 and local5Start -
-                                local3Start <= overhang)):
+                                ### Code for the abundance filter
+                                #variant5Abun = totalAbun5
+                                #variant3Abun = totalAbun3
+                                variant5Abun = tag5Abun
+                                variant3Abun = tag3Abun
 
-                                # Because we can have overhangs, the alignment
-                                # should start and end at the postiions just
-                                # prior to the overhang
-                                alignStart = max(local5Start, local3Start)
-                                alignEnd = min(local5End, local3End)
+                                # Get the abundance of all eight 1-nt
+                                # variants of both 5' and 3' tags
+                                variant5AbunList = getVariantAbundance(
+                                    precursor[2], mapped5Tag[0],
+                                    candidate5Pos, strand)
+                                variant3AbunList = getVariantAbundance(
+                                    precursor[3], mapped3Tag[0],
+                                    candidate3Pos, strand)
 
-                                # Get the einverted alignment for the two
-                                # sequences
-                                matchCount, mismatchCount, wobbleCount,\
-                                    gapCount, asymmetricBulgeCount = \
-                                    getAlignment(arm5, arm3, alignStart,
-                                    alignEnd)
-                                
-                                # If the alignment between the overlapping
-                                # regions of the miRNA and miRNA* do not
-                                # exceed our alignment filters, add the
-                                # duplex to the precursorsWithDuplex filter
-                                if(gapCount + mismatchCount <= 5 and
-                                        asymmetricBulgeCount <= 3):
+                                if(tag5Abun < max(variant5AbunList) or
+                                        tag3Abun < max(variant3AbunList)):
+                                    continue
 
+                                if(variant5Abun == -1 or 
+                                        variant3Abun == -1):
+                                    continue
 
-                                    ### Code for the abundance filter
-                                    #variant5Abun = totalAbun5
-                                    #variant3Abun = totalAbun3
-                                    variant5Abun = tag5Abun
-                                    variant3Abun = tag3Abun
+                                variant5Abun += sum(variant5AbunList)
+                                variant3Abun += sum(variant3AbunList)
 
-                                    # Get the abundance of all eight 1-nt
-                                    # variants of both 5' and 3' tags
-                                    variant5AbunList = getVariantAbundance(
-                                        precursor[2], mapped5Tag,
-                                        candidate5Pos)
-                                    variant3AbunList = getVariantAbundance(
-                                        precursor[3], mapped3Tag,
-                                        candidate3Pos)
+                                #variant5Abun += tag5Abun
+                                #variant3Abun += tag3Abun
 
-                                    if(tag5Abun < max(variant5AbunList) or
-                                            tag3Abun < max(variant3AbunList)):
-                                        continue
+                                # Get the proportion of reads coming from
+                                # the miRNA duplex compred to the rest
+                                # of the reads mapping to the duplex
+                                proportion = (variant5Abun +
+                                    variant3Abun) / (totalAbun5
+                                    + totalAbun3 + loopAbun)
 
-                                    if(variant5Abun == -1 or 
-                                            variant3Abun == -1):
-                                        continue
+                                duplex = [mapped5Tag[0], mapped3Tag[0],
+                                    candidate5Pos, candidate3Pos,
+                                    tag5Abun, tag3Abun,
+                                    matchCount, mismatchCount, wobbleCount,
+                                    gapCount, asymmetricBulgeCount,
+                                    variant5Abun, variant3Abun,
+                                    totalAbun5, totalAbun3,
+                                    loopAbun, proportion]
 
-                                    variant5Abun = sum(variant5AbunList)
-                                    variant3Abun = sum(variant3AbunList)
+                                #print(duplex)
 
-                                    #variant5Abun += tag5Abun
-                                    #variant3Abun += tag3Abun
+                                # Add the precursor name as a key to
+                                # precursorsWithDuplex if it does not
+                                # yet exist. The valu will be a list of 
+                                # duplexes found in the precursor, but the
+                                # first element will be the IR coordinates
+                                if(name not in precursorsWithDuplex):
+                                    precursorsWithDuplex[name] =\
+                                    (precursor[1], [])
 
-                                    # Get the proportion of reads coming from
-                                    # the miRNA duplex compred to the rest
-                                    # of the reads mapping to the duplex
-                                    proportion = (variant5Abun +
-                                        variant3Abun) / (totalAbun5
-                                        + totalAbun3 + loopAbun)
+                                precursorsWithDuplex[name][1].append(duplex)
 
-                                    duplex = [mapped5Tag[0], mapped3Tag[0],
-                                        candidate5Pos, candidate3Pos,
-                                        tag5Abun, tag3Abun,
-                                        matchCount, mismatchCount, wobbleCount,
-                                        gapCount, asymmetricBulgeCount,
-                                        variant5Abun, variant3Abun,
-                                        totalAbun5, totalAbun3,
-                                        loopAbun, proportion]
+                                # If the sum of the two tags in the
+                                # make up more than 75% of the read
+                                # abundance in the entire precursor,
+                                # add the duplex to the candidates
+                                # dictionary
+                                if(proportion >= .75):
+                                    # Add the precursor name as a key to
+                                    # finalCandidates if it does not
+                                    # yet exist. The valu will be a list of 
+                                    # duplexes found in the precursor, but the
+                                    # first element will be the IR coordinates
+                                    if(name not in finalCandidates):
+                                        finalCandidates[name] = \
+                                        (precursor[1], [])
 
-                                    #print(duplex)
-
-                                    # We need to keep everything separated by
-                                    # chromosome still, so create a
-                                    # subdictionary of precursors for each
-                                    # chromosome
-                                    if(chrID not in precursorsWithDuplex):
-                                        precursorsWithDuplex[chrID] = {}
-
-                                    # If the precursor hasn't been added to
-                                    # precursorsWithDuplex, create an entry
-                                    # in the dictionary with the precursor
-                                    # as a key and empty list as a value
-                                    if(name not in precursorsWithDuplex[
-                                            chrID]): 
-                                        precursorsWithDuplex[chrID][name] =\
-                                            [precursor[1], []]
-
-                                        precursorsWithDuplex[chrID][name][1].\
-                                            append(duplex)
-
-                                    # While convenient to use the same
-                                    # structure as precursorDict, we need
-                                    # to keep the duplexes paired. So, the
-                                    # values of the subdictionary will be a
-                                    # list with the sequences of the mapped
-                                    # 5' and 3' tags, the abundance of each,
-                                    # the positions of each and the alignment
-                                    # information, and the total abundance
-                                    # of tags mapping to each 5' and 3' arms.
-                                    precursorsWithDuplex[chrID][name].append(\
-                                        (precursor[1], duplex))
-
-                                    # If the sum of the two tags in the
-                                    # make up more than 75% of the read
-                                    # abundance in the entire precursor,
-                                    # add the duplex to the candidates
-                                    # dictionary
-                                    if(proportion >= .75):
-                                        if(chrID not in finalCandidates):
-                                            finalCandidates[chrID] = {}
-
-                                        if(name not in finalCandidates[chrID]):
-                                            finalCandidates[chrID][name] =\
-                                            [precursor[1], []]
-
-                                        finalCandidates[chrID][name][1].append(
-                                           duplex)
-
+                                    finalCandidates[name][1].append(duplex)
 
     return(precursorsWithDuplex, finalCandidates)
-
-def mergeMapResults(mapList, logList):
-    """
-    Merge the bowtie map and bowtie log files created in a parallel run
-    into one file. Remove the fragment files when complete
-
-    Args:
-        mapList: A list of the fragmented map filenames to be merged
-        logList: A list of the fragmented log filenames to be merged
-    Returns:
-        A single map filename and log filename 
-
-    """
-
-    # Create a dictionary of the tags and the locations that they
-    # map to. The locations are the key in this dictionary and the
-    # tags that map to these locations are the values, in a list in case
-    # more than one tag maps to the same location. This will be used to
-    # quickly identify any tags that map between inverted repeats
-    mapDict = {}
-
-    # Create a dictionary of tags as keys and the locations that they
-    # map as values in a list. This is highly useful when filtering
-    # tags based upon its relative amount of mapping locations as well
-    # as normalizing abundance by hits
-    sNRADict = {}
-
-    # Map fragmented files should have the format filename_##.map.
-    # Split on _ and keep all but last section to remove fragment number
-    mergedMapFilename = "_".join(mapList[0].split('_')[:-1]) + ".map"
-
-    # Log fragments should have the format filename_##_map_bowtie.log.
-    # Split on _ and keep all but the last 3 to remove the fragment number
-    mergedLogFilename = "_".join(mapList[0].split('_')[:-2]) +\
-        "_map_bowtie.log"
-
-    # Open the merged map outupt file to receive the data
-    with open(mergedMapFilename, 'w') as outFile:
-        # Loop through each map fragment file and write each line 
-        # to the output file
-        for filename in mapList:
-            with open(filename) as inFile:
-                for line in inFile:
-                    outFile.write(line)
-
-    # Open the merged log output file to receive the data
-    with open(mergedLogFilename, 'w') as outFile:
-        # Open each fragment and write the log output to the merged
-        # log file. Additionally, write a line to the merged file to
-        # indicate which file the output came from
-        for filename in logList:
-            with open(filename) as inFile:
-                outFile.write("%s\n" % os.path.basename(filename))
-                for line in inFile:
-                    outFile.write(line)
-
-    return(mergedMapFilename, mergedLogFilename)
 
 def mergeLibSeqs(LibList):
     """
@@ -1567,13 +1608,15 @@ def mergeLibSeqs(LibList):
 
     return(uniqueSeqs)
 
-def writeCandidates(filename, candidateDict):
+def writeCandidates(filename, chrDict, precursorsListByChr):
     """
     Write the precursors with their duplex to the output file
 
     Args:
         filename: The name of the output file
-        candidateDict: Dictionary containing candidate precursors and
+        chrDict: Dictionary of chromosomes and their corresponding
+            positions
+        precursorsList: List containing candidate precursors and
             their miRNA:miRNA* duplex for each chromosome
 
     """
@@ -1584,11 +1627,14 @@ def writeCandidates(filename, candidateDict):
     # Open the output file
     with open(precursorFilename, 'w') as f, open(fastaFilename, 'w') as g:
         # loop through the chromosomes, sorted in numerical order
-        for chrID, precursorDict in sorted(candidateDict.items()):
+        for chrID in sorted(chrDict.keys()):
+            chrIndex = chrDict[chrID]
+
+            precursorsDict = precursorsListByChr[chrIndex]
             # Within each chromosome, loop through each precursor
             # and extract information to write to the file
-            for precursorName, precursorList in precursorDict.items():
-                precursor = precursorList[0]
+            for precursorName, duplexList in precursorsDict.items():
+                precursor = duplexList[0]
                 duplexCount = 0
 
                 # Write the precursor (its name, coordinates, and alignment)
@@ -1602,7 +1648,7 @@ def writeCandidates(filename, candidateDict):
 
                 # Loop through all duplexes that were identified for a
                 # precursor and write the stored information to the file
-                for duplex in precursorList[1]:
+                for duplex in duplexList[1]:
                     candidate5Seq = duplex[0]
                     candidate3Seq = duplex[1]
                     candidate5Pos = duplex[2]
@@ -1626,10 +1672,9 @@ def writeCandidates(filename, candidateDict):
                     # In the event that there is more than one duplex for
                     # this precursor, we need a unique identifier for the
                     # miRNA and miRNA*
-                    if(len(precursorList[1]) > 1):
-                        letter = list(string.ascii_lowercase)[duplexCount]
-                        mirName = "miR%s%s" % (precursorName.split(
-                            'mir')[1], letter)
+                    if(len(duplexList[1]) > 1):
+                        mirName = "miR%s_%s" % (precursorName.split(
+                            'mir')[1], duplexCount)
                         duplexCount += 1
                     else:
                         mirName = "miR%s" % precursorName.split('mir')[1]
@@ -1673,11 +1718,16 @@ def writeCandidates(filename, candidateDict):
                     g.write(">%s\n%s\n" % (mirName, mirSeq))
 
 def main():
+    #findSequenceInIR('ATATTTCAGTTGCCTTTCTA', 'AAGGA-ACTAAAGT--AAGA-TATA-T-T-TCAGT-T-GC-CT-T-TCTATATGTAT-A-TATCAAAAGAAGGCTAA-GATCCCAAAAG-T-ATAAAGGAGATTTAAAAG', 17, 37, 20)
+    #findSequenceInIR('TCCAACACGTTCTTCATCTTC', 'TATGGATTATTTATTG-TAATATCTTCTTCTGAACATATCGGAGTT-ATTGGA-GTC-CAACACGTTCTTCATCTTCTTTTCGGCCAGA-ACAT', 52, 73, 21)
+    #findSequenceInIR('TGCCCGTAATTATAAAACATA', 'TAATTATAAAACATATTTAATTTAACATATGAAAC--A-ATACAAA-CAATACAAACAGTTT-TA', 35, 14, 21)
+    #sys.exit()
     progStart = time.time()
     LibList = []
 
     if(parallel):
         nproc = int(round(accel,1))
+        pool = Pool(nproc)
 
     # Create a path for genome if it does not exist already
     if not os.path.isdir("genome"):
@@ -1707,7 +1757,6 @@ def main():
         if(parallel):
             print("Running einverted in parallel")
 
-            pool = Pool(nproc)
             res = pool.starmap_async(GenomeClass.einverted,
                 zip(GenomeClass.genomeSeqList))
 
@@ -1730,7 +1779,7 @@ def main():
                 IRAlignmentFilenamesList.append(IRSeq)
 
     # If einverted was not run, set the temp file lists to be just the list
-    # of the merged final file so that we can create the IRDict using the
+    # of the merged final file so that we can create the IRList using the
     # previously merged file
     else:
         IRFastaFilenamesList = [GenomeClass.IRFastaFilename]
@@ -1744,8 +1793,9 @@ def main():
     # If the debug statement is set on, count the number of miRNAs from
     # the mirna input file that have an identified inverted repeat at its
     # position
+    mirnasList = []
     if(debug): 
-        mirnasList = findMirnasInIRs(GenomeClass.IRDict,
+        mirnasList = findMirnasInIRs(GenomeClass.IRList, GenomeClass.chrDict,
             "Arabidopsis_mirnas.txt")
 
     #########################################################################
@@ -1754,49 +1804,21 @@ def main():
  
     #########################################################################
 
-    # Create a library object for each sRNA library and add each object
-    # to LibList, a list of multiple library objects
-    tempList = []
+    #I want to remove this loop so that we do not store multiple library files at once. 
+    #This should help reduce memory footprint
+    #Also, why am I getting 75% of precursors all of a sudden?
+
     for libraryFilename in libFilenames:
-        LibList.append(Library(libraryFilename))
+        print("Beginning to process %s." % libraryFilename)
+        Lib = Library(libraryFilename, GenomeClass.chrDict)
 
     # Map small RNAs to the genome
-    for Lib in LibList:
-        print("Beginning to process %s." % Lib.filename)
-
-        # Set the name of the merged map file to check if it exists before
-        # performing the mapping. 
-        mapFilename = "%s.map" % ("".join(os.path.splitext(
-                Lib.filename)[0]))
 
         # If the parameter mapFilenames is not set, map the sRNA libraries
         # to the genome 
         if(not mapFilenames):
-            # If the parallel flag is not set, perform the mapping
-            # sequentially
-            if(not parallel):
-                mapFilename, logFilename = GenomeClass.mapper(
-                    GenomeClass.indexFilename, Lib.fastaFilename)
-
-            # If the parallel flag IS set, run the mapper in parallel
-            else:
-                # The results of the mapper function returns two values
-                # which will need to be unpacked into these two lists
-                mapList = []
-                logList = []
-                # Run mapper in parallel
-                res = pool.starmap_async(GenomeClass.mapper, zip(
-                    GenomeClass.indexFilename, repeat(Lib.fastaFilename)))
-                results = res.get()
-
-                # Loop through the results list and unpack the values into
-                # mapList and logList separately
-                for result in results:
-                    mapList.append(result[0])
-                    logList.append(result[1])
-
-                # Merge the map and log files
-                mapFilename, logFilename = mergeMapResults(mapList, logList)
+            mapFilename, logFilename = Lib.mapper(
+                GenomeClass.indexFilename)
 
         else:
             print("Mapping will not be performed for file %s" % Lib.filename)
@@ -1807,34 +1829,40 @@ def main():
 
         #######################################################################
 
-        if(parallel == 0):
-            precursorDict = mapSRNAsToIRs(mapFilename, GenomeClass.IRDict,
-                Lib.libDict, mirnasList)
+        # Create a dictionary with the sequence of all tags that
+        # map to a position on every chromosome
+        print("Creating the mapped list for %s" % Lib.filename)
+        Lib.createMappedList(GenomeClass.chrDict)
 
-        else:
-            # If the mapFilenames parameter is set, we need to extract the
-            # fragment files that had previously been generated
-            if(mapFilenames):
-                mapList = getMapFragmentFilenames(Lib.filename)
+        precursorsList = []
 
-            ### Debugging lines that forces mapSRNAsToIRs to run sequentially
-            #for mapFilename in mapList:
-            #    precursorDict = mapSRNAsToIRs(mapFilename, GenomeClass.IRDict, Lib.libDict)
+        print("Mapping small RNAs to inverted repeats")
 
+        if(not parallel):
             # Run mapSRNAsToIRs in parallel
-            res = pool.starmap_async(mapSRNAsToIRs, zip(mapList,
-                repeat(GenomeClass.IRDict), repeat(Lib.libDict)))
+            res = pool.starmap_async(mapSRNAsToIRs, zip(GenomeClass.IRList,
+                Lib.mappedList, repeat(Lib.libDict), repeat(mirnasList)))
 
             precursorsList = res.get()
 
-            # Merge candidate precursors
-            precursorDict = {k: v for d in precursorsList for k, v in\
-                d.items()}
+        else:
+            for i in range(len(GenomeClass.chrDict)):
+                #funcStart = time.time()
+
+                precursorsList.append(mapSRNAsToIRs(GenomeClass.IRList[i],
+                    Lib.mappedList[i], Lib.libDict, mirnasList))
+
+                #funcEnd = time.time()
+                #execTime = round(funcEnd - funcStart, 2)
+                #print("Time to map to chromosome: %s seconds" % (execTime))
 
         unfilteredFilename = os.path.splitext(Lib.filename)[0] +\
             '_all_precursors.txt'
 
-        writePrecursors(unfilteredFilename, precursorDict)
+        print("Writing precursors to a file")
+    
+        writePrecursors(unfilteredFilename, GenomeClass.chrDict,
+            precursorsList)
 
         # If the debug flag is set, we will want to count the number of
         # miRNAs in the miRNA input file that were sequenced in this
@@ -1851,7 +1879,7 @@ def main():
             # Find the number of miRNAs that have a reportable abundance
             # in the unfiltered precursor list (precursors that have at
             # least one small RNA that map to the 5' and 3' arm of the IR
-            findMirnasInAllPrecursors(precursorDict, mirnasList)
+            findMirnasInAllPrecursors(precursorsList, mirnasList)
 
         #######################################################################
 
@@ -1859,39 +1887,51 @@ def main():
 
         #######################################################################
 
-        if(parallel == 0):
-            precursorsWithDuplex, finalCandidates = filterPrecursors(
-                precursorDict, overhang)
+        print("Filtering candidate precursors")
 
-        else:
+        precursorsWithDuplexList = []
+        finalCandidatesList = []
+
+        if(not parallel):
             res = pool.starmap_async(filterPrecursors, zip(precursorsList,
                 repeat(overhang)))
 
             results = res.get()
 
-            # Filter precursors returns two dictionaries. The first is
-            # a dictionary of precursors that have a miRNA:miRNA*
-            # precursor that pass alignment filters, and the second are
-            # precursors that pass all abundance filters
-            precursorsWithDuplex = {k: v for d in results for k, v in\
-                d[0].items()}
-            finalCandidates = {k: v for d in results for k, v in\
-                d[1].items()}
+            for result in results:
+                precursorsWithDuplexList.append(result[0])
+                finalCandidatesList.append(result[1])
+
+        else:
+            for precursors in precursorsList:
+                precursorsWithDuplex, finalCandidates = filterPrecursors(
+                    precursors, overhang)
+
+                precursorsWithDuplexList.append(precursorsWithDuplex)
+                finalCandidatesList.append(finalCandidates)
 
         unfilteredPrecursorFilename = os.path.splitext(Lib.filename)[0] +\
             '_nearly_final_candidates'
         finalCandidateFilename = os.path.splitext(Lib.filename)[0] +\
             '_final_candidates'
 
-        writeCandidates(unfilteredPrecursorFilename, precursorsWithDuplex)
-        writeCandidates(finalCandidateFilename, finalCandidates)
+        writeCandidates(unfilteredPrecursorFilename, GenomeClass.chrDict,
+            precursorsWithDuplexList)
+        writeCandidates(finalCandidateFilename, GenomeClass.chrDict,
+            finalCandidatesList)
 
         progEnd = time.time()
         execTime = round(progEnd - progStart, 2)
+    
+#    if(debug): 
+#        mirnasList = findMirnasInAllPrecursors(precursorsWithDuplexList, GenomeClass.chrDict,
+#            "Arabidopsis_mirnas.txt")
+#        mirnasList = findMirnasInAllPrecursors(finalCandidatesList, GenomeClass.chrDict,
+#            "Arabidopsis_mirnas.txt")
 
     print("Total runtime was %s seconds" % execTime)
 
-def findMirnasInIRs(IRDict, mirnaFilename):
+def findMirnasInIRs(IRList, chrDict, mirnaFilename):
     """
     This function counts the number of validated miRNAs that are
     found within the coordinates of an inverted repeat
@@ -1914,7 +1954,8 @@ def findMirnasInIRs(IRDict, mirnaFilename):
             mirChr = parsedLine[2]
             mirPos = int(parsedLine[3])
 
-            for repeat in IRDict[mirChr][::2]:
+            index = chrDict[mirChr]
+            for repeat in IRList[index][::2]:
                 countIRs += 1
                 start5 = repeat[0]
                 end5 = repeat[1]
@@ -1936,7 +1977,7 @@ def findMirnasInIRs(IRDict, mirnaFilename):
 
     return(mirnasWithPrecursors)
 
-def findMirnasInAllPrecursors(precursorDict, mirnasList):
+def findMirnasInAllPrecursors(precursorsListByChr, mirnasList):
     """
     Find the number of miRNAs that are present in the all_precursor file
 
@@ -1945,8 +1986,8 @@ def findMirnasInAllPrecursors(precursorDict, mirnasList):
     countMirnasFound = 0
     mappedList = []
     flag = 0
-    for chrID, precursorList in precursorDict.items():
-        for precursor in precursorList:
+    for precursorsList in precursorsListByChr:
+        for precursor in precursorsList:
             mapped5Tags = precursor[2]
             mapped3Tags = precursor[3]
 
@@ -1965,7 +2006,7 @@ def findMirnasInAllPrecursors(precursorDict, mirnasList):
     print("%s miRNAs found in precursors file" % countMirnasFound)
 
     distinctMappedList = list(set(mappedList))
-    print("%s miRNAs found in precursors with miRNA:miRNA* duplex" % \
+    print("%s distinct miRNAs found in precursors file" % \
         len(distinctMappedList))
 
 if __name__ == '__main__':

@@ -24,15 +24,15 @@ from Bio.pairwise2 import format_alignment
 
 ########################## EXECUTION VARIABLES ###############################
 # Name of the genome file
-genomeFilename = 'genome/Arabidopsis/all.fa'
+genomeFilename = 'genome/Maize/Zea_mays.AGPv4.dna.toplevel.fa'
 #genomeFilename = 'genome/fake/fakeGenome_c.fa'
 # List of library file names
-#libFilenames = ['libs/MaizeTest/1681_test2.txt']#, 'libs/MaizeTest/1682_test2.txt']
+libFilenames = ['libs/MAIZE_sbsCSHL_sRNA/2421_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/2432_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/Mz_dcl1_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/1682_chopped.txt']
 #libFilenames = ['libs/fake/fakeLibs_c.txt']#, 'libs/AT_pub2_sRNA/100_chopped.txt']
-libFilenames = ['libs/AT_pub2_sRNA/2202_chopped.txt']
+#libFilenames = ['libs/AT_pub2_sRNA/724_chopped.txt',  'libs/AT_pub2_sRNA/2202_chopped.txt']
 # Optional parameter of merged map files for each library. If these are set,
 # mapping the libFilenames will be bypassed
-mapFilenames = []#['libs/2202_chopped.map']#['libs/MaizeTest/1681_test2.map']
+mapFilenames = []
 #mapFilenames = ['libs/AT_pub2_sRNA/99_chopped.map']#
 # Maximum length over overhang
 overhang = 2
@@ -52,7 +52,7 @@ runEInvertedFlag = 1
 # Flag to utilize parallelization
 parallel = 1        ## Default: 1 (Yes)
 nthreads = 8
-debug = 1
+debug = 0
 
 bowtieBuildPath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie-build')
 bowtiePath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie')
@@ -106,12 +106,12 @@ class Genome:
             chromoInfo = entry.partition('\n')
 
             # We will call the sequence identifier of the FASTA file
-            # the chrID. Technically, this does not have to be a chromosome
+            # the chrName. Technically, this does not have to be a chromosome
             # if the user's file does not contain full chromosomes, but
             # the variable name will at least indicate that
-            chrID = chromoInfo[0].split()[0]
+            chrName = chromoInfo[0].split()[0]
             # Add seqID to chrDict for indexing of chromosomes
-            self.chrDict[chrID] = count
+            self.chrDict[chrName] = count
 
             # Strip the newline character from the sequence
             sequence = chromoInfo[2].replace('\n','').strip()
@@ -121,7 +121,7 @@ class Genome:
             # If the sequence exists, append the sequence ID and the
             # matching sequence to fastaList 
             if(sequence):
-                fastaList.append((chrID, sequence))
+                fastaList.append((chrName, sequence))
 
             else:
                 emptyCount += 1
@@ -319,7 +319,7 @@ class Genome:
                     # readjusted
                     if(counter % 5 == 1):
 
-                        chrID = parsedLine[0].split(':')[0]
+                        chrName = parsedLine[0].split(':')[0]
                         score = int(parsedLine[2].split(':')[0])
                         matches, totalBases = map(int, parsedLine[3].split('/'))
                         percMatch = round(float(matches)/totalBases, 3)
@@ -355,7 +355,7 @@ class Genome:
 
                         # Get the index of the chromosome to add the
                         # inverted repeat to
-                        index = self.chrDict[chrID]
+                        index = self.chrDict[chrName]
 
                         # Add the inverted repeat to the appropriate
                         # list within IRList
@@ -537,13 +537,13 @@ class Library:
         with open(self.mapFilename, 'r') as inFile:
             for line in inFile:
                 flag = line.split('\t')[1]
-                chrID = line.split('\t')[2]
+                chrName = line.split('\t')[2]
                 position = int(line.split('\t')[3])
                 sequence = line.split('\t')[9]
 
                 # If the flag is a star, it means that it did not align
                 # and thus must we break from the loop here
-                if(chrID == '*'):
+                if(chrName == '*'):
                     continue
 
                 # If the 16th bit flag is not set, the strand is w
@@ -560,7 +560,7 @@ class Library:
 
                 # Get the index of the chromosome to add to the appropriate
                 # index of mappedList
-                chrIndex = chrDict[chrID]
+                chrIndex = chrDict[chrName]
 
                 # If the position is not yet in this dictionary, create an
                 # entry for it
@@ -591,7 +591,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
         position: The position of the tags that are present at this location
         subMappedDict: A dictionary of mapped tags and their mapping strands
             at each position. This is the subdictionary of mappedList
-            to avoid passing chrID and IRStrand
+            to avoid passing chrName and IRStrand
         IREnd: The last position of the inverted repeat
         libDict: The entire library dictionary to be queried for abundances
         IRMappedTags: Dictionary of tags mapping to the inverted repeat.
@@ -859,8 +859,8 @@ def writePrecursors(filename, chrDict, precursorsList):
 
     # Open the output file
     with open(filename, 'w') as f:
-        for chrID in sorted(chrDict.keys()):
-            chrIndex = chrDict[chrID]
+        for chrName in sorted(chrDict.keys()):
+            chrIndex = chrDict[chrName]
 
             precursorSubList = precursorsList[chrIndex]
 
@@ -892,7 +892,7 @@ def writePrecursors(filename, chrDict, precursorsList):
 
                 # Write the name and the  chromosome number
                 # followed by the coordinates of the precursor
-                f.write('%s,%s,' % (name, chrID))
+                f.write('%s,%s,' % (name, chrName))
                 for i in range(len(coordinates)):
                     if(i == 5 or i == 6 or i == 7 or i == 8):
                         f.write('%s\n' % coordinates[i])
@@ -1021,7 +1021,7 @@ def getAlign(base1, base2):
         base1: The first nucleotide to be compared
         base2: The second nucleotide to be compared
     Returns:
-        Match, mismatch, gap, or bulge
+        Match, mismatch, or gap
 
     """
 
@@ -1078,47 +1078,32 @@ def getAlignment(arm5, arm3, alignStart, alignEnd):
     mismatchCount = 0
     wobbleCount = 0
     gapCount = 0
-    asymmetricBulgeCount = 0
-
-    # Variable to remember if we are in a bulge to determine
-    # if it is asymmetrically bulged or not
-    bulgeOpen = 0
 
     # Loop through each position of the alignment to determine if the
     # position is a match, mismatch, wobble, or gap
     for position in range(alignStart, alignEnd):
         # Get the aligning information at this position from the
         # getAlign function
-        align = getAlign(arm5[position],
-            arm3[position])
+        align = getAlign(arm5[position], arm3[position])
 
         # If the alignment between the two bases is a match, increment
         # the number of matches and close the gap if it had been 
         # previously opened
         if(align == "match"):
             matchCount += 1
-            if(bulgeOpen):
-                bulgeOpen = 0
 
         # If the alignment between the two bases is a mismatch,
         # increment the number of mismatches 
         elif(align == "mismatch"):
             mismatchCount += 1
-            bulgeOpen = 1
 
         elif(align == "wobble"):
             wobbleCount += 1
-            if(bulgeOpen):
-                gapOpen = 0
 
         else:
             gapCount += 1
-            mismatchCount += 1
-            bulgeOpen = 1
-            asymmetricBulgeCount += 1
 
-    return(matchCount, mismatchCount, wobbleCount, gapCount,
-        asymmetricBulgeCount)
+    return(matchCount, mismatchCount, wobbleCount, gapCount)
 
 def getVariantAbundance(mappedTagsDict, candidateSequence,
     candidatePosition, strand):
@@ -1329,6 +1314,7 @@ def filterPrecursors(precursorsList, overhang):
     # fails alignment filters will not be contained here
     precursorsWithDuplex = {}
     finalCandidates = {}
+    uniqueCandidatesList = {}
 
     # Begin to loop though all of the candidate precursors for the
     # various filters. Each loop begins on the chromosome dictionary
@@ -1478,17 +1464,15 @@ def filterPrecursors(precursorsList, overhang):
                             # Get the einverted alignment for the two
                             # sequences
                             matchCount, mismatchCount, wobbleCount,\
-                                gapCount, asymmetricBulgeCount = \
-                                getAlignment(arm5, arm3, alignStart,
-                                alignEnd)
+                                gapCount = getAlignment(arm5, arm3,
+                                alignStart, alignEnd)
                             
                             # If the alignment between the overlapping
                             # regions of the miRNA and miRNA* do not
                             # exceed our alignment filters, add the
                             # duplex to the precursorsWithDuplex filter
                             if(gapCount + mismatchCount + (wobbleCount * .5) 
-                                   #<= 5 and asymmetricBulgeCount <= 3):
-                                   <= 5 and asymmetricBulgeCount <= 3):
+                                   <= 5 and gapCount <= 3):
 
                                 ### Code for the abundance filter
                                 #variant5Abun = totalAbun5
@@ -1516,9 +1500,6 @@ def filterPrecursors(precursorsList, overhang):
                                 variant5Abun += sum(variant5AbunList)
                                 variant3Abun += sum(variant3AbunList)
 
-                                #variant5Abun += tag5Abun
-                                #variant3Abun += tag3Abun
-
                                 # Get the proportion of reads coming from
                                 # the miRNA duplex compred to the rest
                                 # of the reads mapping to the duplex
@@ -1527,15 +1508,11 @@ def filterPrecursors(precursorsList, overhang):
                                     + totalAbun3 + loopAbun)
 
                                 duplex = [mapped5Tag[0], mapped3Tag[0],
-                                    candidate5Pos, candidate3Pos,
-                                    tag5Abun, tag3Abun,
-                                    matchCount, mismatchCount, wobbleCount,
-                                    gapCount, asymmetricBulgeCount,
-                                    variant5Abun, variant3Abun,
-                                    totalAbun5, totalAbun3,
-                                    loopAbun, proportion]
-
-                                #print(duplex)
+                                    candidate5Pos, candidate3Pos, tag5Abun,
+                                    tag3Abun, matchCount, mismatchCount,
+                                    wobbleCount, gapCount,
+                                    variant5Abun, variant3Abun, totalAbun5,
+                                    totalAbun3, loopAbun, proportion]
 
                                 # Add the precursor name as a key to
                                 # precursorsWithDuplex if it does not
@@ -1543,10 +1520,9 @@ def filterPrecursors(precursorsList, overhang):
                                 # duplexes found in the precursor, but the
                                 # first element will be the IR coordinates
                                 if(name not in precursorsWithDuplex):
-                                    precursorsWithDuplex[name] =\
-                                    (precursor[1], [])
+                                    precursorsWithDuplex[name] = []
 
-                                precursorsWithDuplex[name][1].append(duplex)
+                                precursorsWithDuplex[name].append(duplex)
 
                                 # If the sum of the two tags in the
                                 # make up more than 75% of the read
@@ -1560,10 +1536,9 @@ def filterPrecursors(precursorsList, overhang):
                                     # duplexes found in the precursor, but the
                                     # first element will be the IR coordinates
                                     if(name not in finalCandidates):
-                                        finalCandidates[name] = \
-                                        (precursor[1], [])
+                                        finalCandidates[name] = []
 
-                                    finalCandidates[name][1].append(duplex)
+                                    finalCandidates[name].append(duplex)
 
     return(precursorsWithDuplex, finalCandidates)
 
@@ -1616,7 +1591,7 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
         filename: The name of the output file
         chrDict: Dictionary of chromosomes and their corresponding
             positions
-        precursorsList: List containing candidate precursors and
+        precursorsListByChr: List containing candidate precursors and
             their miRNA:miRNA* duplex for each chromosome
 
     """
@@ -1627,8 +1602,8 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
     # Open the output file
     with open(precursorFilename, 'w') as f, open(fastaFilename, 'w') as g:
         # loop through the chromosomes, sorted in numerical order
-        for chrID in sorted(chrDict.keys()):
-            chrIndex = chrDict[chrID]
+        for chrName in sorted(chrDict.keys()):
+            chrIndex = chrDict[chrName]
 
             precursorsDict = precursorsListByChr[chrIndex]
             # Within each chromosome, loop through each precursor
@@ -1639,7 +1614,7 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
 
                 # Write the precursor (its name, coordinates, and alignment)
                 # to the precursor file
-                f.write('%s,%s,' % (precursorName, chrID))
+                f.write('%s,%s,' % (precursorName, chrName))
                 for i in range(len(precursor)):
                     if(i == 5 or i == 6 or i == 7 or i == 8):
                         f.write('%s\n' % precursor[i])
@@ -1648,7 +1623,7 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
 
                 # Loop through all duplexes that were identified for a
                 # precursor and write the stored information to the file
-                for duplex in duplexList[1]:
+                for duplex in duplexList:
                     candidate5Seq = duplex[0]
                     candidate3Seq = duplex[1]
                     candidate5Pos = duplex[2]
@@ -1659,20 +1634,19 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
                     mismatchCount = duplex[7]
                     wobbleCount = duplex[8]
                     gapCount = duplex[9]
-                    asymmetricBulgeCount = duplex[10]
-                    variant5Abun = duplex[11]
-                    variant3Abun = duplex[12]
-                    totalAbun5 = duplex[13]
-                    totalAbun3 = duplex[14]
-                    loopAbun = duplex[15]
+                    variant5Abun = duplex[10]
+                    variant3Abun = duplex[11]
+                    totalAbun5 = duplex[12]
+                    totalAbun3 = duplex[13]
+                    loopAbun = duplex[14]
                     variantAbun = variant5Abun + variant3Abun
                     totalAbun = totalAbun5 + totalAbun3 + loopAbun
-                    proportion = duplex[16]
+                    proportion = duplex[15]
 
                     # In the event that there is more than one duplex for
                     # this precursor, we need a unique identifier for the
                     # miRNA and miRNA*
-                    if(len(duplexList[1]) > 1):
+                    if(len(duplexList) > 1):
                         mirName = "miR%s_%s" % (precursorName.split(
                             'mir')[1], duplexCount)
                         duplexCount += 1
@@ -1709,11 +1683,10 @@ def writeCandidates(filename, chrDict, precursorsListByChr):
                         starAbun))
 
                     f.write("Match:%s, Mismatch:%s, Wobble:%s, Gap:%s, "\
-                        "Asymmetric bulge:%s, 1-nt Variant Abundance:%s, "\
-                        "Total sRNA Precursor Abundance:%s, "\
-                        "Proportion:%s\n\n" % (matchCount, mismatchCount,
-                        wobbleCount, gapCount, asymmetricBulgeCount,
-                        variantAbun, totalAbun, proportion))
+                        "1-nt Variant Abundance:%s, Total sRNA Precursor "\
+                        "Abundance:%s, Proportion:%s\n\n" % (matchCount,
+                        mismatchCount, wobbleCount, gapCount, variantAbun,
+                        totalAbun, proportion))
 
                     g.write(">%s\n%s\n" % (mirName, mirSeq))
 
@@ -1808,11 +1781,25 @@ def main():
     #This should help reduce memory footprint
     #Also, why am I getting 75% of precursors all of a sudden?
 
+    precursorsWithDuplexDictByLib = {}
+    finalCandidatesDictByLib = {}
+    candidatesByLibDict = {}
+
     for libraryFilename in libFilenames:
         print("Beginning to process %s." % libraryFilename)
         Lib = Library(libraryFilename, GenomeClass.chrDict)
 
-    # Map small RNAs to the genome
+        precursorsWithDuplexDictByLib[libraryFilename] = {}
+        finalCandidatesDictByLib[libraryFilename] = {}
+
+        for chrName in sorted(GenomeClass.chrDict.keys()):
+            chrIndex = GenomeClass.chrDict[chrName]
+            
+            precursorsWithDuplexDictByLib[libraryFilename][chrIndex] = {}
+            finalCandidatesDictByLib[libraryFilename][chrIndex] = {}
+
+
+        # Map small RNAs to the genome
 
         # If the parameter mapFilenames is not set, map the sRNA libraries
         # to the genome 
@@ -1834,22 +1821,22 @@ def main():
         print("Creating the mapped list for %s" % Lib.filename)
         Lib.createMappedList(GenomeClass.chrDict)
 
-        precursorsList = []
+        precursorsListByChr = []
 
         print("Mapping small RNAs to inverted repeats")
 
-        if(not parallel):
+        if(parallel):
             # Run mapSRNAsToIRs in parallel
             res = pool.starmap_async(mapSRNAsToIRs, zip(GenomeClass.IRList,
                 Lib.mappedList, repeat(Lib.libDict), repeat(mirnasList)))
 
-            precursorsList = res.get()
+            precursorsListByChr = res.get()
 
         else:
             for i in range(len(GenomeClass.chrDict)):
                 #funcStart = time.time()
 
-                precursorsList.append(mapSRNAsToIRs(GenomeClass.IRList[i],
+                precursorsListByChr.append(mapSRNAsToIRs(GenomeClass.IRList[i],
                     Lib.mappedList[i], Lib.libDict, mirnasList))
 
                 #funcEnd = time.time()
@@ -1862,7 +1849,7 @@ def main():
         print("Writing precursors to a file")
     
         writePrecursors(unfilteredFilename, GenomeClass.chrDict,
-            precursorsList)
+            precursorsListByChr)
 
         # If the debug flag is set, we will want to count the number of
         # miRNAs in the miRNA input file that were sequenced in this
@@ -1879,7 +1866,7 @@ def main():
             # Find the number of miRNAs that have a reportable abundance
             # in the unfiltered precursor list (precursors that have at
             # least one small RNA that map to the 5' and 3' arm of the IR
-            findMirnasInAllPrecursors(precursorsList, mirnasList)
+            findMirnasInAllPrecursors(precursorsListByChr, mirnasList)
 
         #######################################################################
 
@@ -1889,40 +1876,66 @@ def main():
 
         print("Filtering candidate precursors")
 
-        precursorsWithDuplexList = []
-        finalCandidatesList = []
-
-        if(not parallel):
-            res = pool.starmap_async(filterPrecursors, zip(precursorsList,
+        # If we are running in parallel, run filterPrecursors in parallel.
+        # Parallelize by chromosomes
+        if(parallel):
+            res = pool.starmap_async(filterPrecursors, zip(precursorsListByChr,
                 repeat(overhang)))
 
             results = res.get()
 
-            for result in results:
-                precursorsWithDuplexList.append(result[0])
-                finalCandidatesList.append(result[1])
+            for chrName in sorted(GenomeClass.chrDict.keys()):
+                chrIndex = GenomeClass.chrDict[chrName]
+                # Get the index of chrDict[chrName]
+                precursorsWithDuplexDictByLib[libraryFilename][chrIndex] \
+                     = results[chrIndex][0]
+                finalCandidatesDictByLib[libraryFilename][chrIndex] = \
+                    results[chrIndex][1]
 
+        # If running sequentially, run filterPrecursors sequentially
         else:
-            for precursors in precursorsList:
-                precursorsWithDuplex, finalCandidates = filterPrecursors(
-                    precursors, overhang)
+            for chrName in sorted(GenomeClass.chrDict.keys()):
+                # Get the index of each chromosome that will be processed
+                # sequentially
+                chrIndex = GenomeClass.chrDict[chrName]
+                precursorList = precursorsListByChr[chrIndex]
 
-                precursorsWithDuplexList.append(precursorsWithDuplex)
-                finalCandidatesList.append(finalCandidates)
+                precursorsWithDuplexDictByLib[libraryFilename][chrIndex], \
+                    finalCandidatesDictByLib[libraryFilename][chrIndex] = \
+                    filterPrecursors(precursorList, overhang)
 
+        # Prior to writing this library's results, add its miRNAs and
+        # corresponding precursors to a dictionary because we need to
+        # identify a miRNA in more than 1 library to validate it
+        for chrName, libraryFinalCandidatesDict in \
+                finalCandidatesDictByLib[libraryFilename].items():
+            for precursorName, duplexList in libraryFinalCandidatesDict.items():
+                for duplex in duplexList:
+                    if(precursorName in candidatesByLibDict):
+                        candidatesByLibDict[precursorName].append(
+                            libraryFilename)
+                    else:
+                        candidatesByLibDict[precursorName] = [libraryFilename]
+
+        # Create filenames for the candidate files
         unfilteredPrecursorFilename = os.path.splitext(Lib.filename)[0] +\
             '_nearly_final_candidates'
         finalCandidateFilename = os.path.splitext(Lib.filename)[0] +\
             '_final_candidates'
 
+        # Write the candidate miRNAs from this library to a file
         writeCandidates(unfilteredPrecursorFilename, GenomeClass.chrDict,
-            precursorsWithDuplexList)
+            precursorsWithDuplexDictByLib[libraryFilename])
         writeCandidates(finalCandidateFilename, GenomeClass.chrDict,
-            finalCandidatesList)
+            finalCandidatesDictByLib[libraryFilename])
 
         progEnd = time.time()
         execTime = round(progEnd - progStart, 2)
-    
+
+    for precursorName, precursorList in candidatesByLibDict.items():
+        if(len(precursorList) > 1):
+            print(precursorName, precursorList)
+
 #    if(debug): 
 #        mirnasList = findMirnasInAllPrecursors(precursorsWithDuplexList, GenomeClass.chrDict,
 #            "Arabidopsis_mirnas.txt")

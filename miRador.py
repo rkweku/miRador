@@ -24,14 +24,16 @@ from Bio.pairwise2 import format_alignment
 
 ########################## EXECUTION VARIABLES ###############################
 # Name of the genome file
-genomeFilename = 'genome/Maize/Zea_mays.AGPv4.dna.toplevel.fa'
+#genomeFilename = 'genome/Maize/Zea_mays.AGPv4.dna.toplevel.fa'
+genomeFilename = 'genome/Arabidopsis/all.fa'
 #genomeFilename = 'genome/fake/fakeGenome_c.fa'
 # List of library file names
-libFilenames = ['libs/MAIZE_sbsCSHL_sRNA/2421_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/2432_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/Mz_dcl1_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/1682_chopped.txt']
-#libFilenames = ['libs/fake/fakeLibs_c.txt']#, 'libs/AT_pub2_sRNA/100_chopped.txt']
-#libFilenames = ['libs/AT_pub2_sRNA/724_chopped.txt',  'libs/AT_pub2_sRNA/2202_chopped.txt']
+#libFilenamesList = ['libs/MAIZE_sbsCSHL_sRNA/2421_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/2432_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/Mz_dcl1_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/1682_chopped.txt']
+#libFilenamesList = ['libs/fake/fakeLibs_c.txt']#, 'libs/AT_pub2_sRNA/100_chopped.txt']
+libFilenamesList = ['libs/AT_pub2_sRNA/99_chopped.txt',  'libs/AT_pub2_sRNA/100_chopped.txt']#, 'libs/AT_pub2_sRNA/724_chopped.txt', 'libs/AT_pub2_sRNA/2202_chopped.txt']
+#libFilenamesList = ['libs/AT_DAS1_sRNA/2730_chopped.txt', 'libs/AT_DAS1_sRNA/2731_chopped.txt', 'libs/AT_DAS1_sRNA/2732_chopped.txt', 'libs/AT_DAS1_sRNA/2733_chopped.txt', 'libs/AT_DAS1_sRNA/2734_chopped.txt', 'libs/AT_DAS1_sRNA/2735_chopped.txt', 'libs/AT_DAS1_sRNA/2736_chopped.txt', 'libs/AT_DAS1_sRNA/2737_chopped.txt', 'libs/AT_DAS1_sRNA/3205_chopped.txt', 'libs/AT_DAS1_sRNA/3206_chopped.txt', 'libs/AT_DAS1_sRNA/3207_chopped.txt', 'libs/AT_DAS1_sRNA/3208_chopped.txt', 'libs/AT_DAS1_sRNA/3271_chopped.txt', 'libs/AT_DAS1_sRNA/3382_chopped.txt']
 # Optional parameter of merged map files for each library. If these are set,
-# mapping the libFilenames will be bypassed
+# mapping the libFilenamesList will be bypassed
 mapFilenames = []
 #mapFilenames = ['libs/AT_pub2_sRNA/99_chopped.map']#
 # Maximum length over overhang
@@ -43,16 +45,15 @@ match = 3           ## Default:3
 # Score for a mismatch
 mismatch = -4       ## Default:-4
 # Minimum score for a candidate miRNA precursor
-threshold = 50      ## Default:50 - This is the score threshold for cutoff
+threshold = 40      ## Default:50 - This is the score threshold for cutoff
 # Maximum inverted repeat length that can be identified as a candidate
 # Default is 300 based on max suggested by Axtell and Meyers (TPC 2018)
 maxRepLen = 300
 # Flag to run einverted for this genome file
-runEInvertedFlag = 1
+runEInvertedFlag = 0
 # Flag to utilize parallelization
 parallel = 1        ## Default: 1 (Yes)
 nthreads = 8
-debug = 0
 
 bowtieBuildPath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie-build')
 bowtiePath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie')
@@ -73,9 +74,9 @@ class Genome:
         
         self.genomeSeqList = self.readFasta(self.filename)
 
-        # Create an empty list in IRList for as many chromosomes
+        # Create an empty dictionary in IRDictByChr for as many chromosomes
         # exist
-        self.IRList = [[] for i in range(len(self.chrDict))]
+        self.IRDictByChr = [{} for i in range(len(self.chrDict))]
 
         # Build the bowtie index if it does not exist yet
         self.indexFilename = self.buildBowtieIndex(genomeFilename)
@@ -282,6 +283,7 @@ class Genome:
 
         # Set a counter to process each inverted repeat by line number
         counter = 0
+        IRCounter = 0
 
         # If einverted was run, open the output alignment file to write
         # the results to
@@ -293,7 +295,7 @@ class Genome:
         for filename in IRAlignmentFilenamesList:
             with open(filename) as alignmentFile:
                 # Loop through the alignment files to add them to the
-                # merged file and add them to IRList
+                # merged file and add them to IRDictByChr
 
                 failFlag = 0
                 toWriteList = []
@@ -321,7 +323,8 @@ class Genome:
 
                         chrName = parsedLine[0].split(':')[0]
                         score = int(parsedLine[2].split(':')[0])
-                        matches, totalBases = map(int, parsedLine[3].split('/'))
+                        matches, totalBases = map(int,
+                            parsedLine[3].split('/'))
                         percMatch = round(float(matches)/totalBases, 3)
 
                         if(percMatch == 1):
@@ -358,19 +361,24 @@ class Genome:
                         index = self.chrDict[chrName]
 
                         # Add the inverted repeat to the appropriate
-                        # list within IRList
-                        self.IRList[index].append((start5, end5,
+                        # list within IRDictByChr
+                        IRName = "mir%s" % IRCounter
+                        self.IRDictByChr[index][IRName] = (start5, end5,
                             start3, end3, loop, 'w', hairpin5,
-                            alignmentIndicators, hairpin3))
-                        self.IRList[index].append((start5, end5,
+                            alignmentIndicators, hairpin3)
+
+                        IRCounter += 1
+                        IRName = "mir%s" % IRCounter
+                        self.IRDictByChr[index][IRName] = (start5, end5,
                             start3, end3, loop, 'c', hairpin5,
-                            alignmentIndicators, hairpin3))
+                            alignmentIndicators, hairpin3)
 
                         if(not failFlag and runEInvertedFlag):
                             for entry in toWriteList:
                                 align_out.write(entry)
                         toWriteList = []
                         failFlag = 0
+                        IRCounter += 1
 
                     # Increment the counter
                     counter += 1 
@@ -440,8 +448,8 @@ class Library:
         with open(self.filename) as f:
             for line in f:
                 # Store the sequence and count into variables, then add them
-                # to the dictionary. There should not be any duplicate sequences
-                # in this format, however, 
+                # to the dictionary. There should not be any duplicate
+                # sequences in this format, however, 
                 tag = line.split('\t')[0]
                 count = line.split('\t')[1].strip()
                 libDict[tag] = [int(count), 0]
@@ -642,7 +650,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
 
     return(totalAbun)
 
-def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
+def mapSRNAsToIRs(IRDict, mappedDict, libDict):
     """
     Map small RNAs to the inverted repeats. This will first read in
     the map file (merged mapfile if run in parallel) and identify any
@@ -651,7 +659,7 @@ def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
     Do not count small RNAs that map to the loop of the precursor
 
     Args:
-        IRList: List of the inverted repeats in one chromosome
+        IRDict: Dictionary of the inverted repeats in one chromosome
         mappedDict: Dictionary of positions and sequences that map to those
             positions in one chromosome
         libDict: Dictionary of all library tags and their abundances
@@ -662,11 +670,11 @@ def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
     listOfMirnas = []
 
     # Initialize a dictionary to hold the precursors
-    precursorsList = []
+    precursorsDict = {}
 
     # Loop through the inverted repeats to find all tags within our
     # length cutoffs that map to them
-    for invertedRepeat in IRList:
+    for IRName, invertedRepeat in IRDict.items():
         # Get the strand of the inverted repeat and various other
         # information about the inverted repeat
         start5 = invertedRepeat[0]
@@ -713,10 +721,6 @@ def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
                     if(position >= start5 and position+len(mappedTag) - 1 
                             <= end5):
                         IRMappedTags5[position] = []
-                        #if(mappedTag in mirnasList):
-                        #    mirnasCount += 1
-                        #    listOfMirnas.append(mappedTag)
-                        #    print(mappedTag)
 
                     # If the current tag maps to the 3' arm of the
                     # inverted repeat, add the position to the 
@@ -724,10 +728,6 @@ def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
                     elif(position >= start3 and position+len(mappedTag) - 1
                             <= end3):
                         IRMappedTags3[position] = []
-                        #if(mappedTag in mirnasList):
-                        #    mirnasCount += 1
-                        #    listOfMirnas.append(mappedTag)
-                        #    print(mappedTag)
 
                     # If the tag maps to the loop of the IR, we
                     # only need to 
@@ -833,14 +833,13 @@ def mapSRNAsToIRs(IRList, mappedDict, libDict, mirnasList):
                         hitsNormalizedAbundance = abundance/hits
                         loopAbun += hitsNormalizedAbundance
 
-            # Add the precursor to the precursorsList
-            precursorsList.append([invertedRepeat,
-                IRMappedTags5, IRMappedTags3,
-                totalAbun5, totalAbun3, loopAbun])
+            # Add the mapping information to the precursor dictionary
+            precursorsDict[IRName] = (IRMappedTags5, IRMappedTags3,
+                totalAbun5, totalAbun3, loopAbun)
 
-    return(precursorsList)
+    return(precursorsDict)
 
-def writePrecursors(filename, chrDict, precursorsList):
+def writePrecursors(filename, chrDict, IRDictByChr, mappedTagsToPrecursors):
     """
     Write the predicted precursors to a file with the designated file name
 
@@ -848,53 +847,37 @@ def writePrecursors(filename, chrDict, precursorsList):
         filename: The name of the output file
         chrDict: Dictionary of chromosomes and their corresponding indices
             in the precursorsList
-        precursorsList: List containing all candidate precursors
+        IRDictByChr: List of dictionaries with the inverted repeat information
+        mappedTagsToPrecursors: List of dictionaries containing all tags 
+            that map to each chromosome of the genome. Each list is ui
+            dictionary 
 
     """
-
-    # We want to easily count the number of precursors, so we will
-    # assign them a name with a number here to ensure single core
-    # processing and thus no duplicate numbers
-    precursorCount = 0
 
     # Open the output file
     with open(filename, 'w') as f:
         for chrName in sorted(chrDict.keys()):
             chrIndex = chrDict[chrName]
 
-            precursorSubList = precursorsList[chrIndex]
+            mappedTagsDict = mappedTagsToPrecursors[chrIndex]
 
             # Within each chromosome, loop through each precursor
             # and extract information to write to the file
-            for precursor in precursorSubList:
+            for precursorName, precursor in mappedTagsDict.items():
                 # Coordinates are in the 0th element of the tuple,
                 # and the dictioniary of tags mapping to the 5' and 3'
                 # arms are in the 1st and 2nd element of the tuple,
                 # respectively
-                coordinates = precursor[0]
-                arm5 = precursor[1]
-                arm3 = precursor[2]
+                coordinates = IRDictByChr[chrIndex][precursorName]
+                arm5 = precursor[0]
+                arm3 = precursor[1]
 
-                name = "mir%05d" % precursorCount
-                precursorCount += 1
-                # I want the names of the precursors to have 5 digits,
-                # but if we end up having more than 99,999 precursors,
-                # we need to change the script a bit. Inform the user
-                # and exit
-                if(precursorCount > 99999):
-                    print("Problem: The number of precursors exceeds "\
-                        "the number of precursors Reza thought was "\
-                        "possible. Extend name from %05d to %06d")
-                    sys.exit()
-
-                # Add the name to the precursor
-                precursor.insert(0, name)
-
-                # Write the name and the  chromosome number
+                # Write the name and thechromosome number
                 # followed by the coordinates of the precursor
-                f.write('%s,%s,' % (name, chrName))
                 for i in range(len(coordinates)):
-                    if(i == 5 or i == 6 or i == 7 or i == 8):
+                    if(i == 1):
+                        f.write('%s,' % chrName)
+                    if(i == 6 or i == 7 or i == 8 or i == 9):
                         f.write('%s\n' % coordinates[i])
                     else:
                         f.write('%s,' % coordinates[i])
@@ -984,13 +967,8 @@ def findSequenceInIR(sequence, IRArm, tagLength):
     while(baseCount < tagLength):
         # Store the current base as the current
         # nucleotide at this calculated position
-        try:
-            base = IRArm[localStart + offset + \
-                counter]
-        except IndexError:
-            print(sequence, localStart, offset, counter, baseCount, tagLength, localStart, localEnd)
-            print(IRArm)
-            sys.exit()
+        base = IRArm[localStart + offset + counter]
+
         # Add the base to the new sequence
         sequenceWithGaps += base
 
@@ -1009,7 +987,7 @@ def findSequenceInIR(sequence, IRArm, tagLength):
         counter += 1
 
     localStart += offset
-    localEnd = localStart + tagLength + gapCount
+    localEnd = localStart + tagLength + gapCount - 1
 
     return(sequenceWithGaps, localStart, localEnd)
 
@@ -1140,21 +1118,18 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength + 2):
                     if(mappedSequence[1:-1] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 1)
 
                 # Check for a variant if the mapped sequence is extended on
                 # the 5' end unchanged on the 3' end
                 elif(len(mappedSequence) == candidateSequenceLength + 1):
                     if(mappedSequence[1:] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 2)
 
                 # Check for a variant if the mapped sequence is extended on
                 # the 5' end and shortened on the 3' end
                 elif(len(mappedSequence) == candidateSequenceLength):
                     if(mappedSequence[1:] == candidateSequence[:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 3)
 
         # Check if any variants exist in which the 5' is unchanged
         if(candidatePosition in mappedTagsDict):
@@ -1168,14 +1143,12 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength + 1):
                     if(mappedSequence[:-1] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 4)
             
                 # Check for a variant if the mapped sequence is unchanged on
                 # the 5' end and shortened on the 3' end
                 if(len(mappedSequence) == candidateSequenceLength) - 1:
                     if(mappedSequence == candidateSequence[:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 5)
 
         # Check if any variants exist in which the 5' is shortened
         if(candidatePosition + 1 in mappedTagsDict):
@@ -1189,21 +1162,18 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength):
                     if(mappedSequence[:-1] == candidateSequence[1:]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 6)
 
                 # Check for a variant if the mapped sequence is shortened on
                 # the 5' end and unchanged on the 3' end
                 if(len(mappedSequence) == candidateSequenceLength - 1):
                     if(mappedSequence == candidateSequence[1:]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 7)
 
                 # Check for a variant if the mapped sequence is shortened on
                 # the 5' end and shortened on the 3' end
                 if(len(mappedSequence) == candidateSequenceLength - 2):
                     if(mappedSequence == candidateSequence[1:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 8)
 
     # If the strand is c, mapping is reverse complelmented and thus 
     # the indexing for the variant calculations will basically be the
@@ -1221,21 +1191,18 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength + 2):
                     if(mappedSequence[1:-1] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 1)
 
                 # Check for a variant if the mapped sequence is extended on
                 # the 3' end unchanged on the 5' end
                 elif(len(mappedSequence) == candidateSequenceLength + 1):
                     if(mappedSequence[:-1] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 2)
 
                 # Check for a variant if the mapped sequence is extended on
                 # the 3' end and shortened on the 5' end
                 elif(len(mappedSequence) == candidateSequenceLength):
                     if(mappedSequence[:-1] == candidateSequence[1:]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 3)
 
         # Check if any variants exist in which the 3' is unchanged
         if(candidatePosition in mappedTagsDict):
@@ -1249,14 +1216,12 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength + 1):
                     if(mappedSequence[1:] == candidateSequence):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 4)
             
                 # Check for a variant if the mapped sequence is unchanged on
                 # the 3' end and shortened on the 5' end
                 if(len(mappedSequence) == candidateSequenceLength) - 1:
                     if(mappedSequence == candidateSequence[1:]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 5)
 
         # Check if any variants exist in which the 3' is shortened
         if(candidatePosition + 1 in mappedTagsDict):
@@ -1270,21 +1235,18 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
                 if(len(mappedSequence) == candidateSequenceLength):
                     if(mappedSequence[1:] == candidateSequence[:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 6)
 
                 # Check for a variant if the mapped sequence is shortened on
                 # the 3' end and unchanged on the 5' end
                 if(len(mappedSequence) == candidateSequenceLength - 1):
                     if(mappedSequence == candidateSequence[:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 7)
 
                 # Check for a variant if the mapped sequence is shortened on
                 # the 3' end and shortened on the 5' end
                 if(len(mappedSequence) == candidateSequenceLength - 2):
                     if(mappedSequence == candidateSequence[1:-1]):
                         variantAbundanceList.append(mappedTag[1])
-#                        print(mappedSequence, mappedTag[1], 8)
 
     if(not variantAbundanceList):
         return([0])
@@ -1292,7 +1254,7 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
     else:
         return(variantAbundanceList)
 
-def filterPrecursors(precursorsList, overhang):
+def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
     """
     This function will perform the sRNA mapping and abundance filters.
     It will first try to find a miRNA and miRNA* pair by identifying
@@ -1300,8 +1262,9 @@ def filterPrecursors(precursorsList, overhang):
     splits of the c and w strand if there are tags that map to both
 
     Args:
-        precursorsList: List of precursors with the sRNAs that
-            map to the precursors
+        mappedTagsToPrecursors: Dictionary of tag information mapping
+            to the precursor, identified by the precursor name
+        IRDict: Dictionary of the inverted repeats in one chromosome
         overhang: Maximum length of overhang that a duplex can have
 
     """
@@ -1318,31 +1281,35 @@ def filterPrecursors(precursorsList, overhang):
 
     # Begin to loop though all of the candidate precursors for the
     # various filters. Each loop begins on the chromosome dictionary
-    for precursor in precursorsList:
+    for precursorName, mappedTagsTuple in  mappedTagsToPrecursors.items():
         # Initialize a flag for if the 5' or 3' end of the precursor
         # contains a candidate miRNA
         is3Candidate = False
         is5Candidate = False
 
+        precursor = IRDict[precursorName]
         # Store various elements of the precursor dictionary values
         # for quick accession
-        name = precursor[0]
-        start5 = precursor[1][0]
-        end5 = precursor[1][1]
-        start3 = precursor[1][2]
-        end3 = precursor[1][3]
-        strand = precursor[1][5]
-        arm5 = precursor[1][6]
-        alignmentIndicators = precursor[1][7]
-        arm3 = precursor[1][8]
-        totalAbun5 = precursor[4]
-        totalAbun3 = precursor[5]
-        loopAbun = precursor[6]
+        start5 = precursor[0]
+        end5 = precursor[1]
+        start3 = precursor[2]
+        end3 = precursor[3]
+        strand = precursor[5]
+        arm5 = precursor[6]
+        alignmentIndicators = precursor[7]
+        arm3 = precursor[8]
+
+        # Store the various elements of the mapped tags tuple
+        mappedTagsDict5 = mappedTagsTuple[0]
+        mappedTagsDict3 = mappedTagsTuple[1]
+        totalAbun5 = mappedTagsTuple[2]
+        totalAbun3 = mappedTagsTuple[3]
+        loopAbun = mappedTagsTuple[4]
 
         # Begin a series of loops to identify if there are any tags on
         # the 5' and 3' strands that overlap within a short, user defined
         # overhang
-        for candidate5Pos, mappedTagList5 in precursor[2].items():
+        for candidate5Pos, mappedTagList5 in mappedTagsDict5.items():
             for mapped5Tag in mappedTagList5:
                 # Get the length of the 5' candidate tag so that we can
                 # determine local positions on the precursors
@@ -1393,13 +1360,13 @@ def filterPrecursors(precursorsList, overhang):
                 if(oldSequence5 != sequence5.replace('-','')):
                     print("findSequenceInIR messed up for %s. "\
                         "Contact Reza to debug" % oldSequence5)
-                    print(name, oldSequence5, sequence5, local5Start, local5End)
+                    print(precursorName, oldSequence5, sequence5, local5Start, local5End)
                     sys.exit()
 
                 # Loop through all mapped tags in the 3' dictionary to
                 # identify any candidate miRNA:miRNA* pairs with the
                 # current 5' mapped tag
-                for candidate3Pos, mappedTagList3 in precursor[3].items():
+                for candidate3Pos, mappedTagList3 in mappedTagsDict3.items():
                     for mapped3Tag in mappedTagList3:
                         # Get the length of the 3' candidate tag so that
                         # we can determine local positions on the
@@ -1447,14 +1414,14 @@ def filterPrecursors(precursorsList, overhang):
                         if(oldSequence3 != sequence3.replace('-','')):
                             print("findSequenceInIR messed up for %s. "\
                                 "Contact Reza to debug" % oldSequence3)
-                            print(name, oldSequence3, sequence3, local3Start, local3End)
+                            print(precursorName, oldSequence3, sequence3, local3Start, local3End)
                             sys.exit()
 
                         # If there is a 3' overhang on either the sequence,
                         # we have a candidate duplex and will investigate
                         # it further
                         if((local5End - local3End == overhang) and (
-                            local5Start - local3Start == overhang)):
+                                local5Start - local3Start == overhang)):
                             # Because we can have overhangs, the alignment
                             # should start and end at the postiions just
                             # prior to the overhang
@@ -1483,10 +1450,10 @@ def filterPrecursors(precursorsList, overhang):
                                 # Get the abundance of all eight 1-nt
                                 # variants of both 5' and 3' tags
                                 variant5AbunList = getVariantAbundance(
-                                    precursor[2], mapped5Tag[0],
+                                    mappedTagsDict5, mapped5Tag[0],
                                     candidate5Pos, strand)
                                 variant3AbunList = getVariantAbundance(
-                                    precursor[3], mapped3Tag[0],
+                                    mappedTagsDict3, mapped3Tag[0],
                                     candidate3Pos, strand)
 
                                 if(tag5Abun < max(variant5AbunList) or
@@ -1507,38 +1474,77 @@ def filterPrecursors(precursorsList, overhang):
                                     variant3Abun) / (totalAbun5
                                     + totalAbun3 + loopAbun)
 
-                                duplex = [mapped5Tag[0], mapped3Tag[0],
-                                    candidate5Pos, candidate3Pos, tag5Abun,
-                                    tag3Abun, matchCount, mismatchCount,
-                                    wobbleCount, gapCount,
-                                    variant5Abun, variant3Abun, totalAbun5,
-                                    totalAbun3, loopAbun, proportion]
+                                if(tag5Abun >= tag3Abun):
+                                    duplex = ["5p", mapped3Tag[0],
+                                        candidate5Pos, candidate3Pos, tag5Abun,
+                                        tag3Abun, matchCount, mismatchCount,
+                                        wobbleCount, gapCount, variant5Abun,
+                                        variant3Abun, totalAbun5, totalAbun3,
+                                        loopAbun, proportion]
 
-                                # Add the precursor name as a key to
-                                # precursorsWithDuplex if it does not
-                                # yet exist. The valu will be a list of 
-                                # duplexes found in the precursor, but the
-                                # first element will be the IR coordinates
-                                if(name not in precursorsWithDuplex):
-                                    precursorsWithDuplex[name] = []
-
-                                precursorsWithDuplex[name].append(duplex)
-
-                                # If the sum of the two tags in the
-                                # make up more than 75% of the read
-                                # abundance in the entire precursor,
-                                # add the duplex to the candidates
-                                # dictionary
-                                if(proportion >= .75):
                                     # Add the precursor name as a key to
-                                    # finalCandidates if it does not
+                                    # precursorsWithDuplex if it does not
                                     # yet exist. The valu will be a list of 
                                     # duplexes found in the precursor, but the
                                     # first element will be the IR coordinates
-                                    if(name not in finalCandidates):
-                                        finalCandidates[name] = []
+                                    if(precursorName not in precursorsWithDuplex):
+                                        precursorsWithDuplex[precursorName] = {}
 
-                                    finalCandidates[name].append(duplex)
+                                    precursorsWithDuplex[precursorName][\
+                                        mapped5Tag[0]] = duplex
+
+                                    # If the sum of the two tags in the
+                                    # make up more than 75% of the read
+                                    # abundance in the entire precursor,
+                                    # add the duplex to the candidates
+                                    # dictionary
+                                    if(proportion >= .75):
+                                        # Add the precursor name as a key to
+                                        # finalCandidates if it does not
+                                        # yet exist. The valu will be a list of 
+                                        # duplexes found in the precursor, but the
+                                        # first element will be the IR coordinates
+                                        if(precursorName not in finalCandidates):
+                                            finalCandidates[precursorName] = {}
+
+                                        finalCandidates[precursorName][\
+                                            mapped5Tag[0]] = duplex
+
+                                if(tag3Abun >= tag5Abun):
+                                    duplex = ["3p", mapped5Tag[0],
+                                        candidate3Pos, candidate5Pos, tag3Abun,
+                                        tag5Abun, matchCount, mismatchCount,
+                                        wobbleCount, gapCount, variant3Abun,
+                                        variant5Abun, totalAbun3, totalAbun5,
+                                        loopAbun, proportion]
+
+                                    # Add the precursor name as a key to
+                                    # precursorsWithDuplex if it does not
+                                    # yet exist. The valu will be a list of 
+                                    # duplexes found in the precursor, but the
+                                    # first element will be the IR coordinates
+                                    if(precursorName not in precursorsWithDuplex):
+                                        precursorsWithDuplex[precursorName] = {}
+
+                                    precursorsWithDuplex[precursorName][\
+                                        mapped3Tag[0]] = duplex
+
+                                    # If the sum of the two tags in the
+                                    # make up more than 75% of the read
+                                    # abundance in the entire precursor,
+                                    # add the duplex to the candidates
+                                    # dictionary
+                                    if(proportion >= .75):
+                                        # Add the precursor name as a key to
+                                        # finalCandidates if it does not
+                                        # yet exist. The valu will be a list of 
+                                        # duplexes found in the precursor, but the
+                                        # first element will be the IR coordinates
+                                        if(precursorName not in finalCandidates):
+                                            finalCandidates[precursorName] = {}
+
+                                        finalCandidates[precursorName][
+                                            mapped3Tag[0]] = duplex
 
     return(precursorsWithDuplex, finalCandidates)
 
@@ -1583,118 +1589,131 @@ def mergeLibSeqs(LibList):
 
     return(uniqueSeqs)
 
-def writeCandidates(filename, chrDict, precursorsListByChr):
+def writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
+        IRDictByChr, libFilenamesList, chrDict):
     """
-    Write the precursors with their duplex to the output file
+    Write the candidate miRNAs to the provided filename
 
     Args:
-        filename: The name of the output file
-        chrDict: Dictionary of chromosomes and their corresponding
-            positions
-        precursorsListByChr: List containing candidate precursors and
-            their miRNA:miRNA* duplex for each chromosome
+        filename: Name of file to write data to (in both csv and fasta format)
+        candidatesByLibDict: A dictionary of miRNA precursors that have been
+            validated in any library as a key, and a list of library file 
+            names as keys. This list must contain more than one file to be
+            a candidate
+        filtredPrecursorsDict: A dictionary of more detailed information
+            on the precursors. Candidates are separated by chromosome.
+        IRDictByChr: Dictionary of the inverted repeats and their coordinates
+        libFilenamesList: A list of the library filenames used for predictions
+        chrDict: Dictionary of chromosome names as the key and their index
+            in a list for many variables
 
     """
 
-    precursorFilename = filename + '_precursors.txt'
+    outputFilename = filename + '.csv'
     fastaFilename = filename + '.fa'
 
-    # Open the output file
-    with open(precursorFilename, 'w') as f, open(fastaFilename, 'w') as g:
-        # loop through the chromosomes, sorted in numerical order
-        for chrName in sorted(chrDict.keys()):
+    # Open the output files
+    with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:
+        # Write the column names
+        f.write("miR Name,Chr,Strand,Precursor 5' Start,"\
+            "Precursor 5' End,Precursor 3' Start,Precursor 3' End,"\
+            "miR Sequence,miR Length,miR Position,Star Sequence,Star Length,"\
+            "Star Position,# Matches,# Mismatches,# Wobbles,# Gaps,")
+
+        for libName in libFilenamesList:
+            libNameNoFolders =  ''.join(os.path.splitext(
+                libName.split('/')[-1])[0])
+            f.write("miR Abun in {0},Star Abun in {0},1-nt Variants miR Abun "\
+                "in {0},1-nt Variants Star Abun in {0},Total Precursor Abun "\
+                "in {0},Proportion of reads from miR:miR* in {0}".format(
+                libNameNoFolders))
+
+            if(libName == libFilenamesList[-1]):
+                f.write("\n")
+            else:
+                f.write(",")
+
+        # Loop through candidates and identify any that have been
+        # identified in more than one library. These should be written
+        # to the output files
+        for chrName, precursorDict in candidatesByLibDict.items():
+            # Get the chrIndex to pull from the proper index of the
+            # data structures separating chromosomes as a base list
             chrIndex = chrDict[chrName]
 
-            precursorsDict = precursorsListByChr[chrIndex]
-            # Within each chromosome, loop through each precursor
-            # and extract information to write to the file
-            for precursorName, duplexList in precursorsDict.items():
-                precursor = duplexList[0]
-                duplexCount = 0
+            for precursorName, candidatesDict in precursorDict.items():
+                g.write('>%s\n' % precursorName)
 
-                # Write the precursor (its name, coordinates, and alignment)
-                # to the precursor file
-                f.write('%s,%s,' % (precursorName, chrName))
-                for i in range(len(precursor)):
-                    if(i == 5 or i == 6 or i == 7 or i == 8):
-                        f.write('%s\n' % precursor[i])
-                    else:
-                        f.write('%s,' % precursor[i]) 
+                coordinates = IRDictByChr[chrIndex][precursorName]
+                start5Pos = coordinates[0]
+                end5Pos = coordinates[1]
+                start3Pos = coordinates[2]
+                end3Pos = coordinates[3]
+                loopLen = coordinates[4]
+                strand = coordinates[5]
 
-                # Loop through all duplexes that were identified for a
-                # precursor and write the stored information to the file
-                for duplex in duplexList:
-                    candidate5Seq = duplex[0]
-                    candidate3Seq = duplex[1]
-                    candidate5Pos = duplex[2]
-                    candidate3Pos = duplex[3]
-                    candidate5Abun = duplex[4]
-                    candidate3Abun = duplex[5]
-                    matchCount = duplex[6]
-                    mismatchCount = duplex[7]
-                    wobbleCount = duplex[8]
-                    gapCount = duplex[9]
-                    variant5Abun = duplex[10]
-                    variant3Abun = duplex[11]
-                    totalAbun5 = duplex[12]
-                    totalAbun3 = duplex[13]
-                    loopAbun = duplex[14]
-                    variantAbun = variant5Abun + variant3Abun
-                    totalAbun = totalAbun5 + totalAbun3 + loopAbun
-                    proportion = duplex[15]
+                for mirSeq, libList in candidatesDict.items():
+                    g.write("%s\n" % mirSeq)
+                    # We need to begin writing all information that is not
+                    # library specific, so we will pull this from the first
+                    # library in the list before looping through all libraries
+                    # and populating their respective columns in the output
+                    # file
+                    firstLib = libList[0]
+                    duplexInfo = filteredPrecursorsDict[firstLib][chrName][
+                        precursorName][mirSeq]
+                    arm = duplexInfo[0]
+                    starSeq= duplexInfo[1]
+                    mirPos = duplexInfo[2]
+                    starPos = duplexInfo[3]
+                    matchCount = duplexInfo[6]
+                    mismatchCount = duplexInfo[7]
+                    wobbleCount = duplexInfo[8]
+                    gapCount = duplexInfo[9]
 
-                    # In the event that there is more than one duplex for
-                    # this precursor, we need a unique identifier for the
-                    # miRNA and miRNA*
-                    if(len(duplexList) > 1):
-                        mirName = "miR%s_%s" % (precursorName.split(
-                            'mir')[1], duplexCount)
-                        duplexCount += 1
-                    else:
-                        mirName = "miR%s" % precursorName.split('mir')[1]
+                    miRName = "miR%s-%s" % (precursorName.split('mir')[1], arm)
+                    f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"\
+                        "%s,%s,%s," % (miRName, chrName, strand,
+                        start5Pos, end5Pos, start3Pos, end3Pos, mirSeq,
+                        len(mirSeq), mirPos, starSeq, len(starSeq), starPos,
+                        matchCount, mismatchCount, wobbleCount, gapCount))
 
-                    # Our official candidate of this precursor will
-                    # be the sequence with greatest abundance. If the
-                    # sequences have the same abundance, we will go with
-                    # the mapped 5 sequence. Maybe this should be
-                    # different though...
-                    if(candidate3Abun > candidate5Abun):
-                        mirSeq = candidate3Seq
-                        mirPos = candidate3Pos
-                        mirAbun = candidate3Abun
-                        starSeq = candidate5Seq
-                        starPos = candidate5Pos
-                        starAbun = candidate5Abun
+                    for libName in libFilenamesList:
+                        libNameNoFolders =  ''.join(os.path.splitext(
+                            libName.split('/')[-1])[0])
+                        # If the sequence was predicted in the current
+                        # library, fill its columns with the relevant
+                        # data
+                        if(libNameNoFolders in libList):
+                            duplexInfo = filteredPrecursorsDict[\
+                                libNameNoFolders][chrName][precursorName][\
+                                mirSeq]
+                            mirAbun = duplexInfo[4]
+                            starAbun = duplexInfo[5]
+                            variantMirAbun = duplexInfo[10]
+                            variantStarAbun = duplexInfo[11]
+                            totalAbun5 = duplexInfo[12]
+                            totalAbun3 = duplexInfo[13]
+                            loopAbun = duplexInfo[14]
+                            variantAbun = variantMirAbun + variantStarAbun
+                            totalAbun = totalAbun5 + totalAbun3 + loopAbun
+                            proportion = duplexInfo[15]
 
-                    else:
-                        mirSeq = candidate5Seq
-                        mirPos = candidate5Pos
-                        mirAbun = candidate5Abun
-                        starSeq = candidate3Seq
-                        starPos = candidate3Pos
-                        starAbun = candidate3Abun
+                            f.write("%s,%s,%s,%s,%s,%s" % (mirAbun, starAbun,
+                                variantMirAbun, variantStarAbun, totalAbun,
+                                proportion))
 
-                    f.write("%s-5p\tSequence: %s\tPosition:%s\t"\
-                        "Abundance:%s\n" % (mirName, mirSeq, mirPos,
-                        mirAbun))
+                        # If the sequence was not predicted in the current
+                        # library, write 0 for all columns
+                        else:
+                            f.write("0,0,0,0,0,0")
 
-                    f.write("%s-3p\tSequence: %s\tPosition:%s\t"\
-                        "Abundance:%s\n" % (mirName, starSeq, starPos,
-                        starAbun))
-
-                    f.write("Match:%s, Mismatch:%s, Wobble:%s, Gap:%s, "\
-                        "1-nt Variant Abundance:%s, Total sRNA Precursor "\
-                        "Abundance:%s, Proportion:%s\n\n" % (matchCount,
-                        mismatchCount, wobbleCount, gapCount, variantAbun,
-                        totalAbun, proportion))
-
-                    g.write(">%s\n%s\n" % (mirName, mirSeq))
+                        if(libName == libFilenamesList[-1]):
+                            f.write("\n")
+                        else:
+                            f.write(",")
 
 def main():
-    #findSequenceInIR('ATATTTCAGTTGCCTTTCTA', 'AAGGA-ACTAAAGT--AAGA-TATA-T-T-TCAGT-T-GC-CT-T-TCTATATGTAT-A-TATCAAAAGAAGGCTAA-GATCCCAAAAG-T-ATAAAGGAGATTTAAAAG', 17, 37, 20)
-    #findSequenceInIR('TCCAACACGTTCTTCATCTTC', 'TATGGATTATTTATTG-TAATATCTTCTTCTGAACATATCGGAGTT-ATTGGA-GTC-CAACACGTTCTTCATCTTCTTTTCGGCCAGA-ACAT', 52, 73, 21)
-    #findSequenceInIR('TGCCCGTAATTATAAAACATA', 'TAATTATAAAACATATTTAATTTAACATATGAAAC--A-ATACAAA-CAATACAAACAGTTT-TA', 35, 14, 21)
-    #sys.exit()
     progStart = time.time()
     LibList = []
 
@@ -1752,7 +1771,7 @@ def main():
                 IRAlignmentFilenamesList.append(IRSeq)
 
     # If einverted was not run, set the temp file lists to be just the list
-    # of the merged final file so that we can create the IRList using the
+    # of the merged final file so that we can create the IRDictByChr using the
     # previously merged file
     else:
         IRFastaFilenamesList = [GenomeClass.IRFastaFilename]
@@ -1763,40 +1782,33 @@ def main():
     GenomeClass.combineIRTempFiles(IRFastaFilenamesList,
         IRAlignmentFilenamesList)
 
-    # If the debug statement is set on, count the number of miRNAs from
-    # the mirna input file that have an identified inverted repeat at its
-    # position
-    mirnasList = []
-    if(debug): 
-        mirnasList = findMirnasInIRs(GenomeClass.IRList, GenomeClass.chrDict,
-            "Arabidopsis_mirnas.txt")
-
     #########################################################################
 
     ######################## Map small RNAs to genome #######################
  
     #########################################################################
 
-    #I want to remove this loop so that we do not store multiple library files at once. 
-    #This should help reduce memory footprint
-    #Also, why am I getting 75% of precursors all of a sudden?
-
     precursorsWithDuplexDictByLib = {}
-    finalCandidatesDictByLib = {}
+    filteredPrecursorsDict = {}
     candidatesByLibDict = {}
 
-    for libraryFilename in libFilenames:
+    # Populate candidatesByLibDict chromosomes with empty dictionaries
+    for chrName, chrIndex in GenomeClass.chrDict.items():
+        candidatesByLibDict[chrName] = {}
+
+    for libraryFilename in libFilenamesList:
+        libNameNoFolders =  ''.join(os.path.splitext(
+            libraryFilename.split('/')[-1])[0])
+        
         print("Beginning to process %s." % libraryFilename)
         Lib = Library(libraryFilename, GenomeClass.chrDict)
 
-        precursorsWithDuplexDictByLib[libraryFilename] = {}
-        finalCandidatesDictByLib[libraryFilename] = {}
+        precursorsWithDuplexDictByLib[libNameNoFolders] = {}
+        filteredPrecursorsDict[libNameNoFolders] = {}
 
         for chrName in sorted(GenomeClass.chrDict.keys()):
-            chrIndex = GenomeClass.chrDict[chrName]
-            
-            precursorsWithDuplexDictByLib[libraryFilename][chrIndex] = {}
-            finalCandidatesDictByLib[libraryFilename][chrIndex] = {}
+            precursorsWithDuplexDictByLib[libNameNoFolders][chrName] = {}
+            filteredPrecursorsDict[libNameNoFolders][chrName] = {}
 
 
         # Map small RNAs to the genome
@@ -1810,63 +1822,54 @@ def main():
         else:
             print("Mapping will not be performed for file %s" % Lib.filename)
 
+        print("Creating the mapped list for %s" % Lib.filename)
+        funcStart = time.time()
+
+        # Create a dictionary with the sequence of all tags that
+        # map to a position on every chromosome
+        Lib.createMappedList(GenomeClass.chrDict)
+
+        funcEnd = time.time()
+        execTime = round(funcEnd - funcStart, 2)
+        print("Time to create the mappedList: %s seconds" % (execTime))
+
+    
         #######################################################################
 
         ################# Map small RNAs to inverted repeats ##################
 
         #######################################################################
 
-        # Create a dictionary with the sequence of all tags that
-        # map to a position on every chromosome
-        print("Creating the mapped list for %s" % Lib.filename)
-        Lib.createMappedList(GenomeClass.chrDict)
+        print("Mapping sRNAs to the inverted repeats")
 
-        precursorsListByChr = []
+        funcStart = time.time()
 
-        print("Mapping small RNAs to inverted repeats")
+        mappedTagsToPrecursors = []
 
         if(parallel):
             # Run mapSRNAsToIRs in parallel
-            res = pool.starmap_async(mapSRNAsToIRs, zip(GenomeClass.IRList,
-                Lib.mappedList, repeat(Lib.libDict), repeat(mirnasList)))
+            res = pool.starmap_async(mapSRNAsToIRs, zip(GenomeClass.IRDictByChr,
+                Lib.mappedList, repeat(Lib.libDict)))
 
-            precursorsListByChr = res.get()
+            mappedTagsToPrecursors = res.get()
 
         else:
             for i in range(len(GenomeClass.chrDict)):
-                #funcStart = time.time()
 
-                precursorsListByChr.append(mapSRNAsToIRs(GenomeClass.IRList[i],
-                    Lib.mappedList[i], Lib.libDict, mirnasList))
-
-                #funcEnd = time.time()
-                #execTime = round(funcEnd - funcStart, 2)
-                #print("Time to map to chromosome: %s seconds" % (execTime))
+                mappedTagsToPrecursors.append(mapSRNAsToIRs(
+                    GenomeClass.IRDictByChr[i], Lib.mappedList[i], Lib.libDict))
 
         unfilteredFilename = os.path.splitext(Lib.filename)[0] +\
             '_all_precursors.txt'
 
+        funcEnd = time.time()
+        execTime = round(funcEnd - funcStart, 2)
+        print("Time to map sRNAs to inverted repeats: %s seconds" % (execTime))
+
         print("Writing precursors to a file")
-    
+
         writePrecursors(unfilteredFilename, GenomeClass.chrDict,
-            precursorsListByChr)
-
-        # If the debug flag is set, we will want to count the number of
-        # miRNAs in the miRNA input file that were sequenced in this
-        # library
-        if(debug):
-            mirnasPresent = 0
-            for mirna in mirnasList:
-                if(mirna in Lib.libDict):
-                    #print(mirna, Lib.libDict[mirna])
-                    mirnasPresent += 1
-
-            print("%s miRNAs found in %s." % (mirnasPresent, Lib.filename))
-
-            # Find the number of miRNAs that have a reportable abundance
-            # in the unfiltered precursor list (precursors that have at
-            # least one small RNA that map to the 5' and 3' arm of the IR
-            findMirnasInAllPrecursors(precursorsListByChr, mirnasList)
+            GenomeClass.IRDictByChr, mappedTagsToPrecursors)
 
         #######################################################################
 
@@ -1876,20 +1879,23 @@ def main():
 
         print("Filtering candidate precursors")
 
+        funcStart = time.time()
+
         # If we are running in parallel, run filterPrecursors in parallel.
         # Parallelize by chromosomes
         if(parallel):
-            res = pool.starmap_async(filterPrecursors, zip(precursorsListByChr,
-                repeat(overhang)))
+            res = pool.starmap_async(filterPrecursors, zip(mappedTagsToPrecursors,
+                GenomeClass.IRDictByChr, repeat(overhang)))
 
             results = res.get()
 
             for chrName in sorted(GenomeClass.chrDict.keys()):
                 chrIndex = GenomeClass.chrDict[chrName]
+
                 # Get the index of chrDict[chrName]
-                precursorsWithDuplexDictByLib[libraryFilename][chrIndex] \
+                precursorsWithDuplexDictByLib[libNameNoFolders][chrName] \
                      = results[chrIndex][0]
-                finalCandidatesDictByLib[libraryFilename][chrIndex] = \
+                filteredPrecursorsDict[libNameNoFolders][chrName] = \
                     results[chrIndex][1]
 
         # If running sequentially, run filterPrecursors sequentially
@@ -1898,129 +1904,53 @@ def main():
                 # Get the index of each chromosome that will be processed
                 # sequentially
                 chrIndex = GenomeClass.chrDict[chrName]
-                precursorList = precursorsListByChr[chrIndex]
+                precursorList = mappedTagsToPrecursors[chrIndex]
+                IRDict = GenomeClass.IRDictByChr[chrIndex]
 
-                precursorsWithDuplexDictByLib[libraryFilename][chrIndex], \
-                    finalCandidatesDictByLib[libraryFilename][chrIndex] = \
-                    filterPrecursors(precursorList, overhang)
+                precursorsWithDuplexDictByLib[libNameNoFolders][chrIndex], \
+                    filteredPrecursorsDict[libNameNoFolders][chrName] = \
+                    filterPrecursors(precursorList, IRDict, overhang)
 
+        funcEnd = time.time()
+        execTime = round(funcEnd - funcStart, 2)
+        print("Time to map filter inverted repeats: %s seconds" % (execTime))
+
+        ###
         # Prior to writing this library's results, add its miRNAs and
-        # corresponding precursors to a dictionary because we need to
-        # identify a miRNA in more than 1 library to validate it
-        for chrName, libraryFinalCandidatesDict in \
-                finalCandidatesDictByLib[libraryFilename].items():
-            for precursorName, duplexList in libraryFinalCandidatesDict.items():
-                for duplex in duplexList:
-                    if(precursorName in candidatesByLibDict):
-                        candidatesByLibDict[precursorName].append(
-                            libraryFilename)
-                    else:
-                        candidatesByLibDict[precursorName] = [libraryFilename]
+        # corresponding precursors to a dictionary
 
-        # Create filenames for the candidate files
-        unfilteredPrecursorFilename = os.path.splitext(Lib.filename)[0] +\
-            '_nearly_final_candidates'
-        finalCandidateFilename = os.path.splitext(Lib.filename)[0] +\
-            '_final_candidates'
+        # Loop through each chromosome of the final candidates dictionary
+        # for this library
+        for chrName, subFilteredPrecursorsDict in \
+                filteredPrecursorsDict[libNameNoFolders].items():
 
-        # Write the candidate miRNAs from this library to a file
-        writeCandidates(unfilteredPrecursorFilename, GenomeClass.chrDict,
-            precursorsWithDuplexDictByLib[libraryFilename])
-        writeCandidates(finalCandidateFilename, GenomeClass.chrDict,
-            finalCandidatesDictByLib[libraryFilename])
+            # Loop through each duplex in the precursor and add it to the 
+            # dictionary tracking which library it has been found in
+            for precursorName, duplexDict in subFilteredPrecursorsDict.items():
+                if(precursorName not in candidatesByLibDict[chrName]):
+                    candidatesByLibDict[chrName][precursorName] = {} 
 
-        progEnd = time.time()
-        execTime = round(progEnd - progStart, 2)
+                for mirCandidate in duplexDict.keys():
+                    if(mirCandidate not in candidatesByLibDict[chrName]\
+                            [precursorName]):
+                        candidatesByLibDict[chrName][precursorName]\
+                            [mirCandidate] = []
 
-    for precursorName, precursorList in candidatesByLibDict.items():
-        if(len(precursorList) > 1):
-            print(precursorName, precursorList)
+                    candidatesByLibDict[chrName][precursorName]\
+                        [mirCandidate].append(libNameNoFolders)
 
-#    if(debug): 
-#        mirnasList = findMirnasInAllPrecursors(precursorsWithDuplexList, GenomeClass.chrDict,
-#            "Arabidopsis_mirnas.txt")
-#        mirnasList = findMirnasInAllPrecursors(finalCandidatesList, GenomeClass.chrDict,
-#            "Arabidopsis_mirnas.txt")
+    # Prior to exiting, we need to write the candidates to a file that
+    # are actually identified in more than one library. These are the final
+    # candidates
+    filename = 'output'
+
+    writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
+        GenomeClass.IRDictByChr, libFilenamesList, GenomeClass.chrDict)
+
+    progEnd = time.time()
+    execTime = round(progEnd - progStart, 2)
 
     print("Total runtime was %s seconds" % execTime)
-
-def findMirnasInIRs(IRList, chrDict, mirnaFilename):
-    """
-    This function counts the number of validated miRNAs that are
-    found within the coordinates of an inverted repeat
-
-    """
-
-    countFound = 0
-    countMirnas = 0
-    countIRs = 0
-    mirnasWithPrecursors = []
-    countPrecursors = 0
-
-    with open(mirnaFilename, 'r') as mirnaFile:
-        for line in mirnaFile:
-            mirnaFoundFlag = 0
-            countMirnas += 1
-            parsedLine = line.strip().split('\t')
-            mirName = parsedLine[0]
-            mirSeq = parsedLine[1]
-            mirChr = parsedLine[2]
-            mirPos = int(parsedLine[3])
-
-            index = chrDict[mirChr]
-            for repeat in IRList[index][::2]:
-                countIRs += 1
-                start5 = repeat[0]
-                end5 = repeat[1]
-                start3 = repeat[2]
-                end3 = repeat[3]
-
-                if(mirPos >= start5 and mirPos + (len(mirSeq)) <= end5 or
-                        mirPos >= start3 and mirPos <= end3 + len(mirSeq)):
-                    mirnasWithPrecursors.append(mirSeq)
-
-                    if(not mirnaFoundFlag):
-                        countFound += 1
-                        mirnaFoundFlag = 1
-                    countPrecursors += 1
-
-
-    print("Found %s total precursors" % countPrecursors)
-    print("Found %s out of %s. %s%%" % (countFound, countMirnas, countFound/countMirnas*100))
-
-    return(mirnasWithPrecursors)
-
-def findMirnasInAllPrecursors(precursorsListByChr, mirnasList):
-    """
-    Find the number of miRNAs that are present in the all_precursor file
-
-    """
-
-    countMirnasFound = 0
-    mappedList = []
-    flag = 0
-    for precursorsList in precursorsListByChr:
-        for precursor in precursorsList:
-            mapped5Tags = precursor[2]
-            mapped3Tags = precursor[3]
-
-            for pos in mapped5Tags.keys():
-                for mappedTag in mapped5Tags[pos]:
-                    if(mappedTag[0] in mirnasList):
-                        mappedList.append(mappedTag[0])
-                        countMirnasFound += 1
-
-            for pos in mapped3Tags.keys():
-                for mappedTag in mapped3Tags[pos]:
-                    if(mappedTag[0] in mirnasList):
-                        mappedList.append(mappedTag[0])
-                        countMirnasFound += 1
-
-    print("%s miRNAs found in precursors file" % countMirnasFound)
-
-    distinctMappedList = list(set(mappedList))
-    print("%s distinct miRNAs found in precursors file" % \
-        len(distinctMappedList))
 
 if __name__ == '__main__':
     if parallel == 1:

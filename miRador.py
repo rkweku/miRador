@@ -8,11 +8,8 @@
 #### Written by Reza Hammond
 #### rkweku@udel.edu 
 
-#### Things to do still #####
-# Perform check on fragmentation, particularly when there are multiple sequences but very short sequences
-
 ######## IMPORT ################
-import sys,os,re,subprocess,multiprocessing,datetime,time
+import csv,sys,os,re,subprocess,multiprocessing,datetime,time
 import statistics
 import string
 from multiprocessing import Process, Queue, Pool, current_process
@@ -22,22 +19,23 @@ from itertools import product, repeat
 from Bio import pairwise2
 from Bio.pairwise2 import format_alignment
 
+from Bio.Blast.Applications import NcbiblastnCommandline
+from datetime import datetime
+
 ########################## EXECUTION VARIABLES ###############################
 # Name of the genome file
-#genomeFilename = 'genome/Maize/Zea_mays.AGPv4.dna.toplevel.fa'
-genomeFilename = 'genome/Arabidopsis/all.fa'
+genomeFilename = 'genome/Maize/Zea_mays.AGPv4.dna.toplevel.fa'
+#genomeFilename = 'genome/Arabidopsis/all.fa'
 #genomeFilename = 'genome/fake/fakeGenome_c.fa'
 # List of library file names
-#libFilenamesList = ['libs/MAIZE_sbsCSHL_sRNA/2421_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/2432_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/Mz_dcl1_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/1682_chopped.txt']
+libFilenamesList = ['libs/MAIZE_sbsCSHL_sRNA/2421_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/2432_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/Mz_dcl1_chopped.txt', 'libs/MAIZE_sbsCSHL_sRNA/1682_chopped.txt']
 #libFilenamesList = ['libs/fake/fakeLibs_c.txt']#, 'libs/AT_pub2_sRNA/100_chopped.txt']
-libFilenamesList = ['libs/AT_pub2_sRNA/99_chopped.txt',  'libs/AT_pub2_sRNA/100_chopped.txt']#, 'libs/AT_pub2_sRNA/724_chopped.txt', 'libs/AT_pub2_sRNA/2202_chopped.txt']
+#libFilenamesList = ['libs/AT_pub2_sRNA/99_chopped.txt',  'libs/AT_pub2_sRNA/100_chopped.txt']#, 'libs/AT_pub2_sRNA/724_chopped.txt', 'libs/AT_pub2_sRNA/2202_chopped.txt']
 #libFilenamesList = ['libs/AT_DAS1_sRNA/2730_chopped.txt', 'libs/AT_DAS1_sRNA/2731_chopped.txt', 'libs/AT_DAS1_sRNA/2732_chopped.txt', 'libs/AT_DAS1_sRNA/2733_chopped.txt', 'libs/AT_DAS1_sRNA/2734_chopped.txt', 'libs/AT_DAS1_sRNA/2735_chopped.txt', 'libs/AT_DAS1_sRNA/2736_chopped.txt', 'libs/AT_DAS1_sRNA/2737_chopped.txt', 'libs/AT_DAS1_sRNA/3205_chopped.txt', 'libs/AT_DAS1_sRNA/3206_chopped.txt', 'libs/AT_DAS1_sRNA/3207_chopped.txt', 'libs/AT_DAS1_sRNA/3208_chopped.txt', 'libs/AT_DAS1_sRNA/3271_chopped.txt', 'libs/AT_DAS1_sRNA/3382_chopped.txt']
 # Optional parameter of merged map files for each library. If these are set,
 # mapping the libFilenamesList will be bypassed
 mapFilenames = []
 #mapFilenames = ['libs/AT_pub2_sRNA/99_chopped.map']#
-# Maximum length over overhang
-overhang = 2
 # Penalty for a score
 gap = 12            ## Default:12 (from emboss website)
 # Score for a match
@@ -50,13 +48,27 @@ threshold = 40      ## Default:50 - This is the score threshold for cutoff
 # Default is 300 based on max suggested by Axtell and Meyers (TPC 2018)
 maxRepLen = 300
 # Flag to run einverted for this genome file
-runEInvertedFlag = 0
+runEInvertedFlag = 1
+# First letter of genus and first 2 letters of species. This is important
+# for us to properly annotate miRNAs as novel or not when referencing 
+# mirBase. This is the same format as would be found in mirBase.
+threeLetterIdentifier = "zma"
 # Flag to utilize parallelization
 parallel = 1        ## Default: 1 (Yes)
 nthreads = 8
 
 bowtieBuildPath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie-build')
 bowtiePath = os.path.expanduser('~/tools/bowtie-1.2.2/bowtie')
+
+# The name of the query miRNA File in FASTA format
+queryMirnasFilename = 'output.fa'
+# The name of the subject miRNA file in FASTA format
+subjectSequencesFilename = 'mirBase/mirBaseMirnas.fa'
+# The name of the BLAST database
+dbFilename = 'mirBase/mirBaseMirnas.db'
+
+directory = './'
+
 
 ### Steps #####
 
@@ -1615,10 +1627,8 @@ def writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
     # Open the output files
     with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:
         # Write the column names
-        f.write("miR Name,Chr,Strand,Precursor 5' Start,"\
-            "Precursor 5' End,Precursor 3' Start,Precursor 3' End,"\
-            "miR Sequence,miR Length,miR Position,Star Sequence,Star Length,"\
-            "Star Position,# Matches,# Mismatches,# Wobbles,# Gaps,")
+        f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Length,"\
+            "Star Position,Star Sequence,Star Length,")
 
         for libName in libFilenamesList:
             libNameNoFolders =  ''.join(os.path.splitext(
@@ -1642,18 +1652,12 @@ def writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
             chrIndex = chrDict[chrName]
 
             for precursorName, candidatesDict in precursorDict.items():
-                g.write('>%s\n' % precursorName)
-
                 coordinates = IRDictByChr[chrIndex][precursorName]
-                start5Pos = coordinates[0]
-                end5Pos = coordinates[1]
-                start3Pos = coordinates[2]
-                end3Pos = coordinates[3]
-                loopLen = coordinates[4]
                 strand = coordinates[5]
 
+                mirCount = 1
+
                 for mirSeq, libList in candidatesDict.items():
-                    g.write("%s\n" % mirSeq)
                     # We need to begin writing all information that is not
                     # library specific, so we will pull this from the first
                     # library in the list before looping through all libraries
@@ -1666,17 +1670,31 @@ def writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
                     starSeq= duplexInfo[1]
                     mirPos = duplexInfo[2]
                     starPos = duplexInfo[3]
-                    matchCount = duplexInfo[6]
-                    mismatchCount = duplexInfo[7]
-                    wobbleCount = duplexInfo[8]
-                    gapCount = duplexInfo[9]
 
-                    miRName = "miR%s-%s" % (precursorName.split('mir')[1], arm)
-                    f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,"\
-                        "%s,%s,%s," % (miRName, chrName, strand,
-                        start5Pos, end5Pos, start3Pos, end3Pos, mirSeq,
-                        len(mirSeq), mirPos, starSeq, len(starSeq), starPos,
-                        matchCount, mismatchCount, wobbleCount, gapCount))
+                    # If there is one miRNA candidate in the duplex,
+                    # we don't need to create a unique ID other than
+                    # the name of the precursor
+                    if(len(candidatesDict.keys()) == 1):
+                        mirName = 'miR%s-%s' % (precursorName.split(
+                            'mir')[1], arm)
+
+                    # If there is more than one miRNA candidate in the
+                    # duplex, append mirCount to the precursor number
+                    # to create a unique identifier for each miRNA
+                    # in the duplex
+                    else:
+                        mirName = 'miR%s_%s-%s' % (precursorName.split(
+                            'mir')[1], mirCount, arm)
+                        mirCount += 1
+
+                    # Write the candidate name and the sequence to the
+                    # fasta file
+                    g.write('>%s\n' % mirName)
+                    g.write("%s\n" % mirSeq)
+
+                    f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,
+                        chrName, strand, mirPos, mirSeq, len(mirSeq),
+                        starPos, starSeq, len(starSeq)))
 
                     for libName in libFilenamesList:
                         libNameNoFolders =  ''.join(os.path.splitext(
@@ -1713,9 +1731,494 @@ def writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
                         else:
                             f.write(",")
 
+def getFastaDate(filename, directory):
+    """Get the date of the input filename creation date
+
+    Args:
+        filename: The name of the subject sequence filaneme
+        directory: The directory where the BLAST database would be stored
+
+    Returns:
+        The date of the blast DB update
+
+    """
+
+    # Get the time in the struct_time format
+    updateTime = datetime.fromtimestamp(os.path.getmtime
+        (filename))
+
+    return(updateTime)
+
+def getLocalDBDate(dbName, directory):
+    """Get the date of the blast DB creation date
+
+    Args:
+        dbName: The name of the blast DB
+        directory: The directory where the BLAST database would be stored
+
+    Returns:
+        The date of the blast DB update
+
+    """
+
+    # Only check the creation date if the file even exists
+    if(os.path.isfile('%s.nhr' % dbName)):
+        # Get the time in the struct_time format
+        localDatabaseTime = datetime.fromtimestamp(os.path.getmtime
+            ('%s.nhr' % dbName))
+
+        return(localDatabaseTime)
+
+    # File doesn't exist so return year 1 for comparison sake.
+    # Note: datetime.MINYEAR threw error hence the hardcoded date
+    else:
+        print("There is no file with name %s. Creating BLAST database."\
+            % dbName)
+        return(datetime(1,1,1))
+
+def checkNeedUpdateByDate(subjectSequencesFilename, dbName, directory):
+    """Check to see if the BLAST database needs to be updated
+
+    Args:
+        : The name of the subject sequences file
+        dbName: The name of the BLAST database
+        directory: The directory where the BLAST database would be stored
+
+    Returns:
+        Bool value indicating if the BLAST DB needs to be updated
+
+    """
+
+    # Get the date that the FASTA file was last updated
+    fastaFileDate = getFastaDate(subjectSequencesFilename, directory)
+
+    # Get the date that the database was updated last
+    localDatabaseDate = getLocalDBDate(dbName, directory)
+
+    # If the expression database is newer than the BLAST database,
+    # an update is needed
+    if(fastaFileDate > localDatabaseDate):
+        print("An update is needed to the BLAST database and will be created "\
+        "now. This will take time so please be patient.")
+        return(True)
+
+    # If the expression database is older than the BLAST database,
+    # no update is needed
+    else:
+        print("No update is needed to the BLAST database. Proceeding with "\
+        "the BLAST.")
+        return(False)
+
+
+def createBlastDB(subjectSequencesFilename, dbFilename):
+    """Create a local DB with the subject sequences for BLAST later
+
+    Args:
+        subjectSequencesFilename: The name of the file FASTA file holding 
+            all the sequenes to be BLASTed against
+        dbFilename: The name of the database file that will be written to
+
+    """
+
+    # Create a blast DB from the small RNAs
+    os.system("makeblastdb -in %s -dbtype nucl -parse_seqids -out %s" %
+        (subjectSequencesFilename, dbFilename))
+
+def blastMirnas(subjectSequencesFilename, dbFilename,
+        candidateSequencesFilename):
+    """Create a subject database for the known miRNAs and BLAST
+       all candidate miRNAs to those miRNAs to find the evolutionarily
+       conserved miRNAS
+
+    Args:
+        flastFilename: The name of the FASTA file holding the subject
+            sequences
+        dbFilename: The name of the database file that will be written to
+        candidateSequencesFilename: The name of the FASTA file holding the
+            candidate sequences
+        outputFilename: The name of the output file
+    Returns:
+        The BLAST results in plain text format
+
+    """
+
+    blastFilename = 'mirBase/blastResults.txt'
+
+    # Run blastn-short, but set word size to 11 as 5 is too short IMO
+    NcbiblastnCommandline(query=candidateSequencesFilename,
+        db=dbFilename, task='blastn', word_size='15', outfmt=6,
+        num_threads=8, strand='plus', out=blastFilename)()[0]
+
+    return(blastFilename)
+
+def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename):
+    """Add the full sequences to the XML file for each alignment
+
+    Args:
+        querySequencesFilename: Name of the file holding the query
+            mirnas
+        subjectSequencesFilename: Name of the file holding all subject 
+            sequences and IDs
+
+    """
+
+    blastFilename = 'mirBase/blastResults.txt'
+
+    # Parse query and subject sequences 
+    querySequences = getSequencesFromFasta(querySequencesFilename)
+    subjectSequences = getSequencesFromFasta(subjectSequencesFilename)
+
+    # Read entire output file into to be traversed
+    blastResults = readFile(blastFilename, '\t')
+
+    # Reopen outputFile to add the sequences to it
+    f_out = open(blastFilename, 'w')
+
+    # Loop through the output file to find which row to add the sequence to
+    for row in blastResults:
+        # Get the query and subject IDs from the row
+        queryID = row[0]
+        subjectID = row[1]
+
+        # Using the query and subject IDs, get the query and subject
+        # sequences from the respective dictionaries
+        querySeq = querySequences[queryID].replace('U','T')
+        subjectSeq = subjectSequences[subjectID].replace('U','T')
+
+        # Loop through the row to write the new row to the output file
+        for entry in row:
+            # As long as the entry is not the last entry, print the entry
+            # with a tab after
+            if entry != row[-1]:
+                f_out.write('%s\t' % entry)
+
+                # If the entry is either the queryID or subjectID, print the
+                # corresponding sequence after it
+                if(entry == queryID):
+                    f_out.write('%s\t' % querySeq)
+
+                if(entry == subjectID):
+                    f_out.write('%s\t' % subjectSeq)
+
+            # If the entry is the last element in the row, just write it to the
+            # file without a tab
+            else:
+                f_out.write('%s\n' % entry)
+
+    f_out.close()
+
+def getSequencesFromFasta(filename):
+    """Read a FASTA file into memory as a dictionary
+
+    Args:
+        filename: Name of the file to be read
+    Returns:
+        Variable wholeFile containing the entire file
+
+    """
+
+    # Create empty dictionary to hold full FASTA file
+    queryMirnas = {}
+
+    # loop through file using csv.reader and store in wholeFile
+    f = open(filename, 'r')
+    wholeFile = f.readlines()
+
+    # Loop through the miRNAs and save the miRNA tags only
+    for i in range(0,len(wholeFile),2):
+        # Strip > and newline character from the ID
+        seqID = wholeFile[i][1:-1].split(' ')[0].rstrip()
+        # Strip the newline character from the sequence
+        sequence = wholeFile[i+1]
+        # Store the seqID in the dictionary with sequence as definition
+        # Strip the newline character from the sequence
+        queryMirnas[seqID] = sequence[:-1]
+
+    return(queryMirnas)
+
+def readFile(filename, separator):
+    """Read a file into memory
+
+    Args:
+        filename: Name of the file to be read
+        separator: Delimiter of the file
+
+    Returns:
+        Variable wholeFile containing the entire file
+
+    """
+
+    # Create empty array to hold full csv file
+    wholeFile = []
+
+    # loop through file using csv.reader and store in wholeFile
+    with open(filename, 'r') as f:
+        reader = csv.reader(f, delimiter = separator)
+        for row in reader:
+            wholeFile.append(row)
+
+    return(wholeFile)
+
+def readBlastResults(filename):
+    """Read in the results of the BLAST file after it has had
+       its sequences added back to it
+
+    Args:
+        filename: The name of the blast file to be read in
+
+    Returns:
+        A dictionary of the BLAST results with the candidate miRNA
+        name as the key and a dictionary of results as the value
+
+    """
+
+    blastDict = {}
+
+    # Loop through the blast results fil and add the data to a dictionary
+    with open(filename) as f:
+        for line in f:
+            # Remove the new lin character and split the line on tabs
+            blastResult = line.split('\n')[0].split('\t')
+
+            # Store each element of the blast result as a separate
+            # variable
+            queryName = blastResult[0]
+            subjectName = blastResult[2]
+            # Separate the subject organism identifiers from the miRNA
+            # family
+            subjectOrganismIdentifier = subjectName.split('-')[0]
+            mirnaFamilyName = subjectName.split('-')[1]
+
+            # We don't really care for subsets of a miRNA family, so
+            # remove this if it is present
+            if(not mirnaFamilyName[-1].isdigit()):
+                counter = -1
+                while(not mirnaFamilyName[counter].isdigit()):
+                    counter -= 1 
+                    trimmedMirnaFamilyName = mirnaFamilyName[0:counter+1]
+
+                mirnaFamilyName = trimmedMirnaFamilyName
+
+            # If the query name is not the blast dictionary, initialize
+            # it as an empty dictionary
+            if(queryName not in blastDict):
+                blastDict[queryName] = {}
+
+            # If the mirna family doesn't exist yet in the blastDict
+            # subdictionary, initialize the list for organisms before
+            # adding to it
+            if(mirnaFamilyName not in blastDict[queryName]):
+                blastDict[queryName][mirnaFamilyName] = []
+
+            blastDict[queryName][mirnaFamilyName].append(blastResult)
+
+    return(blastDict)
+
+def createSimilarityDict(blastDict, threeLetterIdentifier):
+    """Create a similarity dictionary to assist in the annotation of the
+       candidate miRNAs that either sho w the equivalence of the candidate
+       sequence with a known sequence, or that a candidate miRNA is
+       highly similar to a known family in a number of species
+
+    Args:
+        blastDict: A dictionary of the blast results with the candidate
+            miRNA name as the key and a dictionary of similar known
+            miRNAs as the value. This dictionary has the miRNA family
+            as a key and then a list of blast results as the value
+        threeLetterIdentifier: First letter of genus and first 2 
+            letters of species..
+
+    Returns:
+        A dictionary that showing the equivalence or near equivalence of
+        a candidate miRNA to known miRNAs
+
+    """
+
+    similarityDict = {}
+
+    for candidateMirna, candidateBlastDict in blastDict.items():
+        breakFlag = 0
+        for mirnaFamily, blastResultsList in candidateBlastDict.items():
+            for blastResult in blastResultsList:
+                candidateSeq = blastResult[1]
+                subjectName = blastResult[2]
+                subjectSeq = blastResult[3]
+                subjectOrganismIdentifier = subjectName.split('-')[0]
+                percIdentity = float(blastResult[4])
+                alignLength = int(blastResult[5])
+                numMismatch = int(blastResult[6])
+                numGaps = int(blastResult[7])
+
+                numMatches = alignLength - numMismatch - numGaps
+
+                # Right now, we are going to classify anything that has
+                # fewer than 5 total differences between the candidate
+                # sequence and a miRNA known miRNA as a member of that family
+                if(len(candidateSeq) - numMatches < 5):
+                    # If candidateMirna or mirnaFamily haven't yet been
+                    # initialized in similarityDict, initiailize them
+                    if(candidateMirna not in similarityDict):
+                        similarityDict[candidateMirna] = {}
+                    if(mirnaFamily not in similarityDict[candidateMirna]):
+                        similarityDict[candidateMirna][mirnaFamily] = []
+
+                    # If the candidate sequence and subject sequences are the
+                    # same (and of course the same organism), then set the
+                    # the value of the similarityDict just to the miRNA name
+                    # and skip the rest of the blast results for this sequence
+                    if(candidateSeq == subjectSeq and threeLetterIdentifier ==
+                            subjectOrganismIdentifier):
+                        similarityDict[candidateMirna] = subjectName
+                        # No need to continue with this candidate miRNA, so
+                        # break from the loop to inspect the next candidate
+                        breakFlag = 1
+                        break
+
+                    # If the exact sequence hasn't been found, add the
+                    # three letter organism identifier to the similarity
+                    # dictionary for this miRNA family
+                    if(subjectOrganismIdentifier not in similarityDict[
+                            candidateMirna][mirnaFamily]):
+                        similarityDict[candidateMirna][mirnaFamily].append(
+                            subjectOrganismIdentifier)
+
+            # If an exact match was found in the same organism, break from
+            # the loop for this candidateMirna as we no longer need to
+            # search for a match
+            if(breakFlag):
+                breakFlag = 0
+                break
+
+    return(similarityDict)
+
+def annotateCandidates(finalFilename, similarityDict, threeLetterIdentifier):
+    """Using the similarityDict, annotate the data in finalFilename with
+       the proper miRNA name, with the already existing family(ies) that the
+       candidate miRNA likely belongs to, or the conservation of an existing
+       family that has not yet been identified in this organism but is 
+       present in another. If a candidate miRNA is novel, it MUST have been
+       identified in more than one library to stay
+
+    Args:
+        finalFilename: Name of file to write data to (in both csv and
+            fasta format)
+        similarityDict: Dictionary of the candidate miRNAs and their
+            potential annotations if there is no equivalence, or just
+            simply its known name if it already exists
+        threeLetterIdentifier: First letter of genus and first two
+            of the species
+
+    """
+
+    outputFilename = finalFilename + '.csv'
+    newOutputFilename = finalFilename + '_annotated.csv'
+
+    finalCandidatesFile = readFile(outputFilename, ',')
+
+    f = open(newOutputFilename, 'w')
+
+    header = finalCandidatesFile[0]
+    header.append("Classification Flag")
+
+    # Get the index of the first library proportion. Useful for
+    # when we need to validate novel tags in more than 1 library,
+    # but we won't use it for conserved families already found
+    # in this species
+    startIterIndex = header.index("Star Length") + 6
+
+    for entry in header:
+        if(entry == header[-1]):
+            f.write("%s\n" % entry)
+        else:
+            f.write("%s," % entry)
+
+    for line in finalCandidatesFile[1:]:
+        mirName = line[0]
+        chrName = line[1]
+        strand = line[2]
+        libCount = 0
+        similarFlag = 0
+
+        # Check if the candidate miRNA name is in the similarityDict
+        # to determine if it is completely novel or not
+        if(mirName in similarityDict):
+            # If the value in similarityDict of the candidate miRNA
+            # is simply a string, that means that the candidate miRNA
+            # is already present within this organism in mirBase, thus
+            # replace the candidate name with the proper annotated name
+            if(isinstance(similarityDict[mirName], str)):
+                similarFlag = True
+                line[0] = similarityDict[mirName]
+                line.append("Known")
+
+            # If the candidate miRNA is similar to sequences in mirBase, but
+            # not identical to anything in this organism, we will need to
+            # write this information to the output file.
+            else:
+                # Loop through each miRNA family that the candidate sequence
+                # had fewer than 5 differences to
+                for mirFamily, organismList in similarityDict[mirName].items():
+                    # If the organism being studied has a very similar
+                    # sequence to one that is already known for this organism
+                    # in miRBase, we will tag it as a member of this family
+                    if(threeLetterIdentifier in organismList):
+                        similarFlag = True
+                        line.append("New member of existing family")
+                        line.append("%s-%s" % (threeLetterIdentifier,
+                            mirFamily))
+
+                    # If the sequence is only similar to miRNAs found in
+                    # other organismList, don't tag as a member of any family.
+                    # Rather, just write the miRNA family name
+                    else:
+                        for i in range(startIterIndex, len(line), 6):
+                            if(float(line[i])):
+                                libCount += 1
+                        if(libCount > 1):
+                            line.append("Conserved family of the following:")
+                            line.append(mirFamily)
+
+                            # Add the list of organismList with this same
+                            # miRNA family that met the similarity
+                            # requirement
+                            toWrite = ""
+                            for organism in sorted(organismList):
+                                if(organism == organismList[-1]):
+                                    toWrite += "%s" % organism
+                                else:
+                                    toWrite += "%s " % organism
+
+                            line.append(toWrite)
+
+        # If the candidate miRNA had no similar sequence, it is completely
+        # novel by our tests and thus requires validation in more than one
+        # library. Thus, here we will literate through the results and
+        # remove candidate miRNAs that were identified in just one library
+        else:
+            similarFlag = False
+            for i in range(startIterIndex, len(line), 6):
+                if(float(line[i])):
+                    libCount += 1
+
+            if(libCount > 1):
+                line.append("Novel")
+
+        if(similarFlag or (not similarFlag and libCount > 1)):
+            for i in range(len(line)):
+                if i == len(line) - 1:
+                    f.write("%s\n" % line[i])
+
+                else:
+                    f.write("%s," % line[i])
+
 def main():
     progStart = time.time()
     LibList = []
+
+    # Required overhang between top and bottom strands of miRNA duplex
+    # Hardcoded to 2 here, but in such a way that could technically allow
+    # modifications
+    overhang = 2
 
     if(parallel):
         nproc = int(round(accel,1))
@@ -1942,15 +2445,81 @@ def main():
     # Prior to exiting, we need to write the candidates to a file that
     # are actually identified in more than one library. These are the final
     # candidates
-    filename = 'output'
+    finalFilename = 'output'
 
-    writeCandidates(filename, candidatesByLibDict, filteredPrecursorsDict,
+    writeCandidates(finalFilename, candidatesByLibDict, filteredPrecursorsDict,
         GenomeClass.IRDictByChr, libFilenamesList, GenomeClass.chrDict)
+
+    ##########################################################################
+
+    ################### Annotate candidate miRNAs ############################
+
+    ##########################################################################
+
+    # Check to see if the BLAST database needs to be updated
+    updateFlag = checkNeedUpdateByDate(subjectSequencesFilename, dbFilename,
+        directory)
+
+    # Update the blast database if updateFlag is true
+    if(updateFlag):
+        # Create the database from the file holding the subject sequences
+        localStartTime = time.time()
+        dbName = createBlastDB(subjectSequencesFilename, dbFilename)
+
+    # BLAST query miRNAs to known miRNAs
+    localStartTime = time.time()
+    print("Performing BLAST")
+    blastFilename = blastMirnas(subjectSequencesFilename, dbFilename,
+        queryMirnasFilename)
+
+    # Add field for the subject and query sequences in the BLAST output
+    # because these sequences are not within by default
+    print("Adding sequences to output file")
+    addSequencesToOutput(queryMirnasFilename, subjectSequencesFilename)
+
+    # Read the BLAST results into a dictionary for quick querying
+    blastDict = readBlastResults(blastFilename)
+
+    # Create a dictionary of either the known miRNAs that the candidate
+    # miRNAs are equal to, or the miRNA families and species that the
+    # candidate miRNA is highly similar to
+    similarityDict = createSimilarityDict(blastDict, threeLetterIdentifier)
+
+    # Properly annotate the candidate miRNAs with the data in similarityDict
+    annotateCandidates(finalFilename, similarityDict, threeLetterIdentifier)
 
     progEnd = time.time()
     execTime = round(progEnd - progStart, 2)
 
     print("Total runtime was %s seconds" % execTime)
+
+def test():
+    # Check to see if the BLAST database needs to be updated
+    updateFlag = checkNeedUpdateByDate(subjectSequencesFilename, dbFilename, directory)
+
+    # Update the blast database if updateFlag is true
+    if(updateFlag):
+        # Create the database from the file holding the subject sequences
+        localStartTime = time.time()
+        dbName = createBlastDB(subjectSequencesFilename, dbFilename)
+
+    # BLAST query miRNAs to known miRNAs
+    localStartTime = time.time()
+    print("Performing BLAST")
+    blastFilename = blastMirnas(subjectSequencesFilename, dbFilename,
+        queryMirnasFilename)
+
+    # Add field for the subject and query sequences in the XML output file
+    print("Adding sequences to output file")
+    addSequencesToOutput(queryMirnasFilename, subjectSequencesFilename)
+
+    blastDict = readBlastResults(blastFilename)
+
+    similarityDict = createSimilarityDict(blastDict, threeLetterIdentifier)
+
+    finalFilename = 'output'
+
+    annotateCandidates(finalFilename, similarityDict, threeLetterIdentifier)
 
 if __name__ == '__main__':
     if parallel == 1:

@@ -1,0 +1,6 @@
+[submodule "sPARTA"]
+	path = sPARTA
+	url = https://github.com/atulkakrana/sPARTA.git
+[submodule "preprocess.seq"]
+	path = preprocess.seq
+	url = https://github.com/atulkakrana/preprocess.seq.git

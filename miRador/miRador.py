@@ -362,7 +362,7 @@ def miRador():
     if(updateFlag):
         # Create the database from the file holding the subject sequences
         localStartTime = time.time()
-        dbName = annotaetCandidates.createBlastDB(subjectSequencesFilename,
+        dbName = annotateCandidates.createBlastDB(subjectSequencesFilename,
             dbFilename)
 
     # BLAST query miRNAs to known miRNAs

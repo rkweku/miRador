@@ -12376,6 +12376,7 @@ der-mir-991-3p36628
 der-mir-991-5p36627
 der-mir-992-2-5p36635
 der-mir-992-5p36629
+der-mir-992-??36630
 der-mir-9a10097
 der-mir-9b10099
 der-mir-9c10151
@@ -21433,6 +21434,7 @@ hpo-mir-10081-5p39143
 hpo-mir-10082-3p39148
 hpo-mir-10082-5p39147
 hpo-mir-10083-3p39152
+hpo-mir-10083-??39151
 hpo-mir-10084-3p39154
 hpo-mir-10084-5p39153
 hpo-mir-10085-3p39156
@@ -21559,6 +21561,7 @@ hpo-mir-10142-5p39286
 hpo-mir-10143-3p39289
 hpo-mir-10143-5p39288
 hpo-mir-10144-3p39291
+hpo-mir-10144-??39290
 hpo-mir-10145-3p39293
 hpo-mir-10145-5p39292
 hpo-mir-10146-3p39295
@@ -24894,12 +24897,6 @@ lca-mir-223434
 lca-mir-23a3869
 lca-mir-27a3870
 lca-mir-923791
-lcl|136630
-lcl|236886
-lcl|337366
-lcl|439151
-lcl|539290
-lcl|640287
 lcl|aae-bantam-3p14978
 lcl|aae-bantam-5p14977
 lcl|aae-let-715062
@@ -37278,6 +37275,7 @@ lcl|der-mir-991-3p36628
 lcl|der-mir-991-5p36627
 lcl|der-mir-992-2-5p36635
 lcl|der-mir-992-5p36629
+lcl|der-mir-992-??36630
 lcl|der-mir-9a10097
 lcl|der-mir-9b10099
 lcl|der-mir-9c10151
@@ -46335,6 +46333,7 @@ lcl|hpo-mir-10081-5p39143
 lcl|hpo-mir-10082-3p39148
 lcl|hpo-mir-10082-5p39147
 lcl|hpo-mir-10083-3p39152
+lcl|hpo-mir-10083-??39151
 lcl|hpo-mir-10084-3p39154
 lcl|hpo-mir-10084-5p39153
 lcl|hpo-mir-10085-3p39156
@@ -46461,6 +46460,7 @@ lcl|hpo-mir-10142-5p39286
 lcl|hpo-mir-10143-3p39289
 lcl|hpo-mir-10143-5p39288
 lcl|hpo-mir-10144-3p39291
+lcl|hpo-mir-10144-??39290
 lcl|hpo-mir-10145-3p39293
 lcl|hpo-mir-10145-5p39292
 lcl|hpo-mir-10146-3p39295
@@ -59148,6 +59148,7 @@ lcl|oha-mir-449a-5p37362
 lcl|oha-mir-449c-3p37365
 lcl|oha-mir-449c-5p37364
 lcl|oha-mir-451-3p37367
+lcl|oha-mir-451-??37366
 lcl|oha-mir-455-3p37369
 lcl|oha-mir-455-5p37368
 lcl|oha-mir-45637370
@@ -64875,6 +64876,7 @@ lcl|ppy-mir-516b16898
 lcl|ppy-mir-517a16899
 lcl|ppy-mir-517c-3p36885
 lcl|ppy-mir-517c-5p36884
+lcl|ppy-mir-517c-??36886
 lcl|ppy-mir-518a-3p16901
 lcl|ppy-mir-518a-5p16900
 lcl|ppy-mir-518c16902
@@ -68296,6 +68298,7 @@ lcl|sfr-mir-10483-2-3p40280
 lcl|sfr-mir-10483-3p40279
 lcl|sfr-mir-10483-5p40278
 lcl|sfr-mir-10484-3p40288
+lcl|sfr-mir-10484-??40287
 lcl|sfr-mir-10485-3p40292
 lcl|sfr-mir-10485-5p40291
 lcl|sfr-mir-10486-3p40294
@@ -83131,6 +83134,7 @@ oha-mir-449a-5p37362
 oha-mir-449c-3p37365
 oha-mir-449c-5p37364
 oha-mir-451-3p37367
+oha-mir-451-??37366
 oha-mir-455-3p37369
 oha-mir-455-5p37368
 oha-mir-45637370
@@ -88858,6 +88862,7 @@ ppy-mir-516b16898
 ppy-mir-517a16899
 ppy-mir-517c-3p36885
 ppy-mir-517c-5p36884
+ppy-mir-517c-??36886
 ppy-mir-518a-3p16901
 ppy-mir-518a-5p16900
 ppy-mir-518c16902
@@ -92279,6 +92284,7 @@ sfr-mir-10483-2-3p40280
 sfr-mir-10483-3p40279
 sfr-mir-10483-5p40278
 sfr-mir-10484-3p40288
+sfr-mir-10484-??40287
 sfr-mir-10485-3p40292
 sfr-mir-10485-5p40291
 sfr-mir-10486-3p40294

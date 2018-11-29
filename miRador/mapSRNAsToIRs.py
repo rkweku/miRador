@@ -78,9 +78,6 @@ def mapSRNAsToIRs(IRDict, mappedDict, libDict):
 
     """
 
-    mirnasCount = 0
-    listOfMirnas = []
-
     # Initialize a dictionary to hold the precursors
     precursorsDict = {}
 

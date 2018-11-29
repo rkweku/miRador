@@ -71,11 +71,11 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                     # this precursor, we need a unique identifier for the
                     # miRNA and miRNA*
                     if(len(duplexDict.keys()) > 1):
-                        mirName = "miR%s_%s" % (precursorName.split(
-                            'mir')[1], duplexCount)
+                        mirName = "candidate-%s_%s" % (precursorName.split(
+                            'precursor-')[1], duplexCount)
                         duplexCount += 1
                     else:
-                        mirName = "miR%s" % precursorName.split('mir')[1]
+                        mirName = "candidate-%s" % precursorName.split('precursor-')[1]
 
                     f.write("%s-%s\tSequence: %s\tPosition:%s\t"\
                         "Abundance:%s\n" % (mirName, arm, mirSeq, mirPos,
@@ -868,16 +868,16 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # we don't need to create a unique ID other than
                     # the name of the precursor
                     if(True):#len(filteredPrecursorsDict[) == 1):
-                        mirName = 'miR%s-%s' % (precursorName.split(
-                            'mir')[1], arm)
+                        mirName = 'candidate-%s-%s' % (precursorName.split(
+                            'precursor-')[1], arm)
 
                     # If there is more than one miRNA candidate in the
                     # duplex, append mirCount to the precursor number
                     # to create a unique identifier for each miRNA
                     # in the duplex
                     else:
-                        mirName = 'miR%s_%s-%s' % (precursorName.split(
-                            'mir')[1], mirCount, arm)
+                        mirName = 'candidate-%s_%s-%s' % (precursorName.split(
+                            'precursor-')[1], mirCount, arm)
                         mirCount += 1
 
                     # Write the candidate name and the sequence to the

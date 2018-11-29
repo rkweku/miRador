@@ -10,6 +10,18 @@ class Genome:
     def __init__(self, filename, bowtieBuildPath):
         self.filename = filename
         self.chrDict = {}
+
+        ### Initialize several output folders if they do not exist yet
+        # Create a path for genome if it does not exist already
+        if(not os.path.isdir("genome")):
+            os.mkdir('genome')
+        # Create a path for the inverted repeat if it does not exist already
+        if(not os.path.isdir("invertedRepeats")):
+            os.mkdir("invertedRepeats")
+        # Create a path for the bowtieIndex folder if it does not exist
+        if(not os.path.isdir("genome/bowtieIndex")):
+            os.mkdir('genome/bowtieIndex')
+
         self.IRFastaFilename = "invertedRepeats/%s_Inverted_Seqs.fa" %\
             os.path.splitext(os.path.basename(self.filename))[0]
         self.IRAlignmentFilename = "invertedRepeats/%s_Inverted_Aligns.inv" %\
@@ -31,7 +43,9 @@ class Genome:
         Args:
             filename: Name of the file to be read
         Returns:
-            Variable wholeFile containing the entire file
+            Variable fastaList containing the genome file as a list of tuples
+            where the first element of each tuple  is the chromosome name
+            and the second is the full chromosome sequence
 
         """
 
@@ -40,19 +54,21 @@ class Genome:
         count = 0
         emptyCount = 0
 
-        # loop through file using csv.reader and store in wholeFile
-        f = open(filename, 'r')
-        wholeFile = f.read()
+        # Read the full fil into fastaFil so that we can parse on '>'
+        f = open(filename, "r")
+        fastaFile = f.read()
+        f.close()
 
         # Loop through the FASTA file and split by sequence name in case
-        # there are some sequence names with no sequence on the next line   
-        for entry in wholeFile.split('>')[1:]:
-            chromoInfo = entry.partition('\n')
+        # there are some sequence names with no sequence on the next line
+        for line in fastaFile.split(">")[1:]:
+            chromoInfo = line.partition('\n')
 
             # We will call the sequence identifier of the FASTA file
-            # the chrName. Technically, this does not have to be a chromosome
-            # if the user's file does not contain full chromosomes, but
-            # the variable name will at least indicate that
+            # the chrName. Technically, this does not have to be a
+            # chromosome if the user's file does not contain full
+            # chromosomes, but the variable name will at least indicate
+            # that
             chrName = chromoInfo[0].split()[0]
             # Add seqID to chrDict for indexing of chromosomes
             self.chrDict[chrName] = count
@@ -60,7 +76,7 @@ class Genome:
             # Strip the newline character from the sequence
             sequence = chromoInfo[2].replace('\n','').strip()
 
-            # Increment the entry counter
+            # Increment the sequence counter
             count += 1
             # If the sequence exists, append the sequence ID and the
             # matching sequence to fastaList 
@@ -69,12 +85,36 @@ class Genome:
 
             else:
                 emptyCount += 1
-        
+
         print("Total entries in File: %s | Total empty entries in file: %s" %
             (count, emptyCount))
         print("Total entries in the genome FASTA list: %s" % (len(fastaList)))
 
         return(fastaList)
+
+    def checkBowtieNeedsUpdate(self, indexFilename):
+        """Check if the index filename already exists. Return true if it
+        does not and needs to be updated, but return false if doesn't
+        need an update.
+
+        Args:
+            indexFilename: Name of the index file that would be created
+                by bowtie-build for the genome file
+
+        Returns:
+            True if no update is needed, false if an update is needed
+
+        """
+
+        pattern = re.compile("%s(.*?).ebwt" % os.path.basename(indexFilename))
+
+        # Check if a bowtie index file exists, and if it does, return false,
+        # otherwise, return true so that bowtie-build can be run
+        for filepath in os.listdir('genome/bowtieIndex'):
+            if(pattern.match(filepath)):
+                return(False)
+
+        return(True) 
 
     def buildBowtieIndex(self, filename, bowtieBuildPath):
         """Code to create a bowtie index for the inverited repeats file.
@@ -98,44 +138,21 @@ class Genome:
             print("Building a bowtie index for %s" % (filename))
             with open("genome/bowtieIndex/%s_bowtiebuild.log" %\
                     filenameStripped, 'w') as logFile:
-                subprocess.call([bowtieBuildPath, filename, indexFilename],
-                    stdout = logFile)
+                returnCode = subprocess.call([bowtieBuildPath, filename,
+                    indexFilename], stdout = logFile)
+
+            if(returnCode):
+                print("Something went wrong when running bowtie-build. "\
+                    "Command was\n%s %s %s" % (bowtieBuildPath, filename,
+                    indexFilename))
+                sys.exit()
 
             logFile.close()
 
         return(indexFilename)
 
-    def checkBowtieNeedsUpdate(self, indexFilename):
-        """Check if the index filename already exists. Return true if it
-        does not and needs to be updated, but return false if doesn't
-        need an update.
-
-        Args:
-            indexFilename: Name of the index file that would be created
-                by bowtie-build for the genome file
-
-        Returns:
-            True if no update is needed, false if an update is needed
-
-        """
-
-        # Check if the bowtieIndex file exists in the genome folder.
-        # Create it if it does not
-        if(not os.path.isdir("genome/bowtieIndex")):
-            os.mkdir('genome/bowtieIndex')
-
-        pattern = re.compile("%s(.*?).ebwt" % os.path.basename(indexFilename))
-
-        # Check if a bowtie index file exists, and if it does, return false,
-        # otherwise, return true so that bowtie-build can be run
-        for filepath in os.listdir('genome/bowtieIndex'):
-            if(pattern.match(filepath)):
-                return(False)
-
-        return(True) 
-
-    def runEinverted(self, chrAndSeq, match, mismatch, gap, threshold,
-            maxRepLen):
+    def runEinverted(self, einvertedPath, chrAndSeq, match, mismatch, gap,
+            threshold, maxRepLen):
         """Fuunction to run einverted for a sequence
         
         Args:
@@ -180,7 +197,7 @@ class Genome:
 
         # Call einverted utilizing this current sequence with the user
         # defined arguments from the config file.
-        retcode = subprocess.call(["einverted", "-sequence", tempInput,
+        returnCode = subprocess.call([einvertedPath, "-sequence", tempInput,
             "-gap", str(gap), "-threshold", str(threshold), "-match",
             str(match), "-mismatch", str(mismatch), "-maxrepeat",
             str(maxRepLen), "-outfile", outputAlignmentFilename,
@@ -190,9 +207,12 @@ class Genome:
         # If a return code of anything but 0 is returned, it means there
         # was a problem and it should be investigated. Temp files wiill
         # remain from the run to assist in the debugging process
-        if(retcode != 0):
-            print("Something wrong happened while running einverted for "\
-                "%s" % (tempInput))
+        if(returnCode != 0):
+            print("Something went wrong when running einverted. Command was\n"\
+                "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
+                "%s -maxrepeat %s -outfil %s -outseq %s" % (einvertedPath,
+                tempInput, gap, threshold, match, mismatch, maxRepLen,
+                outputAlignmentFilename, outputFastaFilename))
             sys.exit()
 
         # Delete the temporary FASTA file that was created so that
@@ -327,13 +347,13 @@ class Genome:
 
                         # Add the inverted repeat to the appropriate
                         # list within IRDictByChr
-                        IRName = "mir%s" % IRCounter
+                        IRName = "precursor-%s" % IRCounter
                         self.IRDictByChr[index][IRName] = (start5, end5,
                             start3, end3, loop, 'w', hairpin5,
                             alignmentIndicators, hairpin3)
 
                         IRCounter += 1
-                        IRName = "mir%s" % IRCounter
+                        IRName = "precursor-%s" % IRCounter
                         self.IRDictByChr[index][IRName] = (start5, end5,
                             start3, end3, loop, 'c', hairpin5,
                             alignmentIndicators, hairpin3)
@@ -359,5 +379,6 @@ class Genome:
             # Combine the inverted repeats FASTA and alignmenet filenames
             # lists to delete all of these temp files
             garbage = IRFastaFilenamesList + IRAlignmentFilenamesList
-            for file in garbage:
-                os.remove(file)
+            for toDelete in garbage:
+                if os.path.exists(toDelete):
+                    os.remove(toDelete)

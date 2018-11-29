@@ -57,16 +57,16 @@ def miRador():
     maxRepLen = int(config.get("EInverted", "maxRepLen"))
 
     libFilenamesList = config.get("Libraries", "libFilenamesList").split(',')
-    mapFilenamesList = config.get("Libraries", "mapFilenamesList").split(',')
 
     # Grab the information for the BLAST variables
     subjectSequencesFilename = config.get("BLAST", "subjectSequencesFilename")
     dbFilename = config.get("BLAST", "dbFilename")
     organism = config.get("BLAST", "organism")
 
-    parallel = config.get("General", "parallel")
+    parallel = int(config.get("General", "parallel"))
     nthreads = config.get("General", "nthreads")
     bowtiePath = os.path.expanduser(config.get("General", "bowtiePath"))
+    einvertedPath = os.path.expanduser(config.get("General", "einvertedPath"))
     bowtieBuildPath = os.path.expanduser(config.get("General",
         "bowtieBuildPath"))
     perlPath = os.path.expanduser(config.get("General", "perlPath"))
@@ -126,8 +126,9 @@ def miRador():
             print("Running einverted in parallel")
 
             res = pool.starmap_async(GenomeClass.runEinverted,
-                zip(GenomeClass.genomeSeqList, repeat(match), repeat(mismatch),
-                repeat(gap), repeat(threshold), repeat(maxRepLen)))
+                zip(repeat(einvertedPath), GenomeClass.genomeSeqList,
+                repeat(match), repeat(mismatch), repeat(gap), 
+                repeat(threshold), repeat(maxRepLen)))
 
             results = res.get()
 
@@ -141,8 +142,8 @@ def miRador():
             print("Running einverted sequentially")
 
             for entry in GenomeClass.genomeSeqList:
-                IRName, IRSeq = GenomeClass.runEinverted(entry, match,
-                    mismatch, gap, threshold, maxReLen)
+                IRName, IRSeq = GenomeClass.runEinverted(einvertedPath, 
+                    entry, match, mismatch, gap, threshold, maxRepLen)
 
                 IRFastaFilenamesList.append(IRName)
                 IRAlignmentFilenamesList.append(IRSeq)
@@ -186,25 +187,16 @@ def miRador():
             precursorsWithDuplexDictByLib[libNameNoFolders][chrName] = {}
             filteredPrecursorsDict[libNameNoFolders][chrName] = {}
 
-
         # Map small RNAs to the genome
+        print("Running bowtie on %s" % Lib.filename)
+        funcStart = time.time()
 
-        # If the parameter mapFilenamesList is not set, map the sRNA libraries
-        # to the genome 
-        if(not mapFilenamesList):
-            print("Running bowtie on %s" % Lib.filename)
-            funcStart = time.time()
+        logFilename = Lib.mapper(GenomeClass.indexFilename, bowtiePath)
 
-            mapFilename, logFilename = Lib.mapper(
-                GenomeClass.indexFilename, bowtiePath)
-
-            funcEnd = time.time()
-            execTime = round(funcEnd - funcStart, 2)
-            print("Time to run bowtie for %s: %s seconds" % \
-                (mapFilename, execTime))
-
-        else:
-            print("Mapping will not be performed for file %s" % Lib.filename)
+        funcEnd = time.time()
+        execTime = round(funcEnd - funcStart, 2)
+        print("Time to run bowtie for %s: %s seconds" % \
+            (Lib.mapFilename, execTime))
 
         print("Creating the mapped list for %s" % Lib.filename)
         funcStart = time.time()
@@ -229,7 +221,7 @@ def miRador():
 
         mappedTagsToPrecursors = []
 
-        if(not parallel):
+        if(parallel):
             # Run mapSRNAsToIRs in parallel
             res = pool.starmap_async(mapSRNAsToIRs.mapSRNAsToIRs,
                 zip(GenomeClass.IRDictByChr, Lib.mappedList,

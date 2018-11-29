@@ -1,5 +1,7 @@
 import os
+import subprocess
 import time
+import sys
 
 class Library:
     """
@@ -9,10 +11,15 @@ class Library:
     def __init__(self, filename, chrDict):
         self.filename = filename
         self.fastaFilename = "".join(self.filename.split('.')[:-1]) + '.fa'
+
+        if(not os.path.isdir("libs")):
+            os.mkdir("libs")
+
         self.libDict = self.readTagCount()
+
         # Create the mapped filename for this library
-        self.mapFilename = "%s.map" % ("".join(os.path.splitext(
-            self.filename)[0]))
+        self.mapFilename = "libs/%s.map" % ("".join(os.path.splitext(
+            os.path.basename(self.filename))[0]))
 
         # Using chrDict from the genome file, create a tuple of multiple
         # dictionaries. Each dictionary in the tuple will represent a 
@@ -78,6 +85,7 @@ class Library:
         Args:
             indexFilename: Path and name of the index for the genome. 
                 This will be a fragment if fragFasta was run
+            bowtiePath: The path of bowtie
         Returns:
             Filename of mapped data
 
@@ -87,13 +95,7 @@ class Library:
         # name with that stripped filename in the libs folder
         indexNameStripped = os.path.basename(indexFilename)
 
-        if(not os.path.isdir("libs")):
-            os.mkdir("libs")
-
-        outputFilename = '%s.map' % "".join(os.path.splitext(
-            self.fastaFilename)[:-1])
-
-        logFilename = "%s_bowtie.log" % os.path.splitext(outputFilename)[:-1] 
+        logFilename = "%s_bowtie.log" % os.path.splitext(self.mapFilename)[:-1]
 
         # Run bowtie
         print("Mapping small RNAs to the genome files for %s" %\
@@ -115,14 +117,21 @@ class Library:
             # earlier for efficiency
             ### Note that the output of bowtie is send to stderr for some 
             ### which is why this log flie goes there
-            subprocess.call([bowtiePath, indexFilename, "-f",
-                self.fastaFilename, "-a", "-m 50", "--best", "--strata", "-p",
-                str(nthreads), "-v 0", "-S", outputFilename, "--sam-nohead",
-                "--no-unal"], stderr = logFile)
+            returnCode = subprocess.call([bowtiePath, indexFilename, "-f",
+                self.fastaFilename, "-a", "-m 50", "--best", "--strata",
+                "-v 0", "-S", self.mapFilename, "--sam-nohead", "--no-unal"],
+                stderr = logFile)
+
+            if(returnCode):
+                print("Something went wrong when running bowtie. Command was"\
+                    "\n%s %s -f %s -a -m 50 --best --strata -v 0 -S "\
+                    "%s --sam-nohead --no-unal" % (bowtiePath, indexFilename,
+                    self.fastaFilename, self.mapFilename))
+                sys.exit()
 
         logFile.close()
 
-        return(outputFilename, logFilename)
+        return(logFilename)
 
     def createMappedList(self, chrDict):
         """Create a dictionary to hold the mapped sRNAs for simple querying

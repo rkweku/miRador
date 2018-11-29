@@ -426,7 +426,6 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                 os.rename("%s/images/%s_precursor.pdf" % (outputFolder, 
                     mirName), "%s/images/%s_precursor.pdf" % (outputFolder,
                     similarityDict[mirName]))
-                
 
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
@@ -441,8 +440,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                     if(organism in organismList):
                         similarFlag = True
                         line.append("New member of existing family")
-                        line.append("%s-%s" % (organism,
-                            mirFamily))
+                        line.append("%s-%s-like" % (organism, mirFamily))
 
                     # If the sequence is only similar to miRNAs found in
                     # other organismList, don't tag as a member of any family.

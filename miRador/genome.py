@@ -130,8 +130,7 @@ class Genome:
         # Set the index filename. Remove any file extension and folders
         # from the filename path to ensure the index file is written
         # to the correct folder that is hardcoded here
-        filenameStripped = ''.join(os.path.splitext(
-            filename.split('/')[-1])[0])
+        filenameStripped = os.path.splitext(filename.split('/')[-1])[0]
         indexFilename = "genome/bowtieIndex/%s" % (filenameStripped)
 
         if(self.checkBowtieNeedsUpdate(indexFilename)):

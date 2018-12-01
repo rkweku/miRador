@@ -175,7 +175,8 @@ def miRador():
         candidatesByLibDict[chrName] = {}
 
     for libraryFilename in libFilenamesList:
-        libNameNoFolders = os.path.splitext(os.path.basename(libraryFilename))[0]
+        libNameNoFolders = os.path.splitext(os.path.basename(
+            libraryFilename))[0]
 
         print("Beginning to process %s." % libraryFilename)
         Lib = library.Library(libraryFilename, GenomeClass.chrDict)
@@ -191,7 +192,8 @@ def miRador():
         print("Running bowtie on %s" % Lib.filename)
         funcStart = time.time()
 
-        logFilename = Lib.mapper(GenomeClass.indexFilename, bowtiePath)
+        logFilename = Lib.mapper(GenomeClass.indexFilename, bowtiePath,
+            nthreads)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)

@@ -10,7 +10,7 @@ class Library:
 
     def __init__(self, filename, chrDict):
         self.filename = filename
-        self.fastaFilename = "".join(self.filename.split('.')[:-1]) + '.fa'
+        self.fastaFilename = "%s.fa" % os.path.splitext(self.filename)[0]
 
         if(not os.path.isdir("libs")):
             os.mkdir("libs")
@@ -18,8 +18,7 @@ class Library:
         self.libDict = self.readTagCount()
 
         # Create the mapped filename for this library
-        self.mapFilename = "libs/%s.map" % ("".join(os.path.splitext(
-            os.path.basename(self.filename))[0]))
+        self.mapFilename = "%s.map" % os.path.splitext(self.filename)[0]
 
         # Using chrDict from the genome file, create a tuple of multiple
         # dictionaries. Each dictionary in the tuple will represent a 
@@ -79,12 +78,11 @@ class Library:
 
         return(libDict)
 
-    def mapper(self, indexFilename, bowtiePath):
+    def mapper(self, indexFilename, bowtiePath, nthreads):
         """Map small RNAs to the provided index file
 
         Args:
             indexFilename: Path and name of the index for the genome. 
-                This will be a fragment if fragFasta was run
             bowtiePath: The path of bowtie
         Returns:
             Filename of mapped data
@@ -125,8 +123,8 @@ class Library:
             if(returnCode):
                 print("Something went wrong when running bowtie. Command was"\
                     "\n%s %s -f %s -a -m 50 --best --strata -v 0 -S "\
-                    "%s --sam-nohead --no-unal" % (bowtiePath, indexFilename,
-                    self.fastaFilename, self.mapFilename))
+                    "%s -P %s --sam-nohead --no-unal" % (bowtiePath, indexFilename,
+                    self.fastaFilename, self.mapFilename, nthreads))
                 sys.exit()
 
         logFile.close()

@@ -889,8 +889,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                         starPos, starSeq, len(starSeq)))
 
                     for libName in libFilenamesList:
-                        libNameNoFolders =  join(os.path.splitext(
-                            libName.split('/')[-1])[0])
+                        libNameNoFolders =  os.path.splitext(
+                            libName.split('/')[-1])[0]
                         # If the sequence was predicted in the current
                         # library, fill its columns with the relevant
                         # data

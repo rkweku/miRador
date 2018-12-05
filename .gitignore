@@ -1,6 +1,7 @@
 # Output and data folders
 output*/
 invertedRepeats/
+miRador.ini
 mirBase/blastResults.txt
 
 # Byte-compiled / optimized / DLL files

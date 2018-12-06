@@ -658,9 +658,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                     + totalAbun3 + loopAbun)
 
                                 # The 5' mapping tag will be kept as a candidate
-                                # miRNA if it has a greater or equal abundnace
-                                # to the 3' mapping tag
-                                if(tag5Abun >= tag3Abun):
+                                # miRNA if it has at least an abundance of 10
+                                if(tag5Abun >= 10):
                                     duplex = ("5p", mapped3Tag[0],
                                         candidate5Pos, candidate3Pos, tag5Abun,
                                         tag3Abun, matchCount, mismatchCount,
@@ -699,9 +698,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                             mapped5Tag[0]] = duplex
 
                                 # The 3' mapping tag will be kept as a candidate
-                                # miRNA if it has a greater or equal abundnace
-                                # to the 5' mapping tag
-                                if(tag3Abun >= tag5Abun):
+                                # miRNA if it has an abundance of at least 10
+                                if(tag3Abun >= 10):
                                     duplex = ("3p", mapped5Tag[0],
                                         candidate3Pos, candidate5Pos, tag3Abun,
                                         tag5Abun, matchCount, mismatchCount,

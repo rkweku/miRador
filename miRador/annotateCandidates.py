@@ -444,8 +444,6 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                     # in miRBase, we will tag it as a member of this family
                     if(organism in organismList):
                         similarFlag = True
-                        print(mirName, similarityDict[mirName])
-                        print(organism)
                         line.append("New member of existing family")
                         line.append("%s-%s-like" % (organism, mirFamily))
 

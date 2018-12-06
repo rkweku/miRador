@@ -761,7 +761,7 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
     mir_out.write('%s\n%s' % (mirSeq, starSeq))
     mir_out.close()
 
-    print("perl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName, precursorSeq, tempFilename))
+    #print("perl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName, precursorSeq, tempFilename))
 
     returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
         mirName, precursorSeq, tempFilename])

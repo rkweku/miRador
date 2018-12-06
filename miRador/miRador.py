@@ -16,6 +16,7 @@ import datetime
 import os
 import multiprocessing
 import time
+import shutil
 import sys
 
 from itertools import repeat
@@ -26,37 +27,56 @@ import genome
 import library
 import mapSRNAsToIRs
 
-# List of library file names
-#libFilenamesList = []
-#for file in os.listdir("libs/AT_pub2_sRNA"):
-#    if file.endswith("chopped.txt"):
-#        libFilenamesList.append(os.path.join("libs/AT_pub2_sRNA", file))
-
-# Prior to exiting, we need to write the candidates to a file that
-# are actually identified in more than one library. These are the final
-# candidates
-
 def miRador():
+    """Parse configuration file and make necessary calls to the various
+    helper functions to perform the entire miRNA prediction of the user
+    provided input files. This function primarily serves as a wrapper
+    to those other functions in other files
+
+    """
+
     progStart = time.time()
 
     ######################## Parse Config File ###############################
     configFilename = sys.argv[1]
-    ### Parse the config file
     config = configparser.ConfigParser()
     config.read(configFilename)
+
+    # Get the preprocessing arguments
+    #runPreprocessFlag = config.get("Preprocess", "runPreprocessFlag")
 
     # Get the genome file name
     genomeFilename = config.get("Genome", "genomeFilename")
 
     # Get the EInverted arguments
-    runEInvertedFlag = int(config.get("EInverted", "runEInvertedFlag"))
-    match = int(config.get("EInverted", "match"))
-    mismatch = int(config.get("EInverted", "mismatch"))
-    gap = int(config.get("EInverted", "gap"))
-    threshold = int(config.get("EInverted", "threshold"))
-    maxRepLen = int(config.get("EInverted", "maxRepLen"))
+    runEInvertedFlag = int(config.get("EInverted", "runEInvertedFlag",
+        fallback = 1))
+    match = int(config.get("EInverted", "match", fallback = 3))
+    mismatch = int(config.get("EInverted", "mismatch", fallback = 4))
+    gap = int(config.get("EInverted", "gap", fallback = 6))
+    threshold = int(config.get("EInverted", "threshold", fallback = 40))
+    maxRepLen = int(config.get("EInverted", "maxRepLen", fallback = 300))
 
-    libFilenamesList = config.get("Libraries", "libFilenamesList").split(',')
+    # Get the Libraries arguments and parse the libraries into a list
+    # of strings. User can input a list of files or just a directory
+    # holding all of the tag count files
+    libFilenamesList = []
+    libFilenamesString = config.get("Libraries", "libFilenamesList",
+        fallback = "")
+    libFolder = config.get("Libraries", "libFolder", fallback = "")
+
+    # If individual libraries were given, split the string on commas and
+    # store them in libFilenamesList 
+    if(libFilenamesString):
+        libFilenamesList = libFilenamesString.split(",")
+
+    # If libFolder was specified, loop through the files in the folder
+    # and add all files that end with "chopped.txt" to to libFilenamesList
+    if(libFolder):
+        for file in os.listdir(libFolder):
+            if file.endswith("chopped.txt"):
+                libFilenamesList.append("%s/%s" % (libFolder,
+                    os.path.join(file)))
 
     # Grab the information for the BLAST variables
     subjectSequencesFilename = config.get("BLAST", "subjectSequencesFilename")
@@ -66,19 +86,63 @@ def miRador():
     parallel = int(config.get("General", "parallel"))
     nthreads = config.get("General", "nthreads")
     bowtiePath = os.path.expanduser(config.get("General", "bowtiePath"))
-    einvertedPath = os.path.expanduser(config.get("General", "einvertedPath"))
     bowtieBuildPath = os.path.expanduser(config.get("General",
         "bowtieBuildPath"))
+    einvertedPath = os.path.expanduser(config.get("General", "einvertedPath"))
     perlPath = os.path.expanduser(config.get("General", "perlPath"))
+    outputFolder = config.get("General", "outputFolder", fallback = "")
 
     # Required overhang between top and bottom strands of miRNA duplex
     # Hardcoded to 2 here, but in such a way that could technically allow
     # modifications
     overhang = 2
 
-    ### Check dependencies of variables
+    ###########################################################################
 
-    ##########################################################################
+    ### Check the existence of all input files and that the paths to 
+    # external functions exist before running
+
+    # Make sure the genome file exists as defined
+    if(not os.path.isfile(genomeFilename)):
+        print("%s could not be found! Please check that the file path "\
+            "was input correctly" % genomeFilename)
+        sys.exit()
+
+    # Do not allow execution if both libFilenamesString and libFolder
+    # are defined to anything other than empty strings
+    if(libFilenamesString and libFolder):
+        print("You specified both libName and libNamesList, but only one"\
+            "can exist. Delete one and try running again")
+        sys.exit()
+
+    # Loop through all libraries in libFilenamesList and confirm that they
+    # exist before running
+    for libName in libFilenamesList:
+        if(not os.path.isfile(libName)):
+            print("%s could not be found! Please check that the file path "\
+                "was input correctly" % libName)
+            sys.exit()
+
+    if(not shutil.which(bowtiePath)):
+        print("bowtie could not be found at the provided path: %s\nCorrect "\
+            "before running again" % bowtiePath)
+        sys.exit()
+
+    if(not shutil.which(bowtieBuildPath)):
+        print("bowtie-build could not be found at the provided path: %s\n"\
+            "Correct before running again" % bowtieBuildPath)
+        sys.exit()
+
+    if(not shutil.which(einvertedPath)):
+        print("einverted could not be found at the provided path: %s\n"\
+            "Correct before running again" % einvertedPath)
+        sys.exit()
+    
+    if(not shutil.which(perlPath)):
+        print("perl could not be found at the provided path: %s\n"\
+            "Correct before running again" % perlPath)
+        sys.exit()
+
 
     ### Create the necessary folders if they don't already exist
     # Create a path for genome if it does not exist already
@@ -88,9 +152,27 @@ def miRador():
     if(not os.path.isdir("invertedRepeats")):
         os.mkdir("invertedRepeats")
 
+    # If the user has filled the outputFolder option, check to see if it
+    # has results from an older run and then delete them
+    if(outputFolder):
+        if(os.path.isdir("%s/libs" % outputFolder)):
+            shutil.rmtree("%s/libs" % outputFolder)
+        if(os.path.isdir("%s/images" % outputFolder)):
+            shutil.rmtree("%s/images" % outputFolder)
+        if(os.path.isfile("%s/finalAnnotatedCandidates.csv" % outputFolder)):
+            os.remove("%s/finalAnnotatedCandidates.csv" % outputFolder)
+        if(os.path.isfile("%s/preAnnotatedCandidates.csv" % outputFolder)):
+            os.remove("%s/preAnnotatedCandidates.csv" % outputFolder)
+        if(os.path.isfile("%s/preAnnotatedCandidates.fa" % outputFolder)):
+            os.remove("%s/preAnnotatedCandidates.fa" % outputFolder) 
+
+    ###########################################################################
+
     # Create a path for an output folder if it does not exist already
     # (Almost certainly shoul dnot as it would require the same run second)
-    outputFolder = datetime.datetime.now().strftime('output_%Y-%m-%d_%H-%M-%S')
+    else:
+        outputFolder = datetime.datetime.now().strftime(
+            'output_%Y-%m-%d_%H-%M-%S')
     if not os.path.isdir(outputFolder):
         os.mkdir(outputFolder)
     if not os.path.isdir("%s/libs" % outputFolder):

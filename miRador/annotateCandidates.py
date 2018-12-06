@@ -422,10 +422,15 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
 
                 # If the miRNA is known, update the image filename
                 # within the image folder to assist in quick identification
-                # with the given name in the final annotated csv file
-                os.rename("%s/images/%s_precursor.pdf" % (outputFolder, 
-                    mirName), "%s/images/%s_precursor.pdf" % (outputFolder,
-                    similarityDict[mirName]))
+                # with the given name in the final annotated csv file.
+                # But if the name with the candidate sequence does not exist,
+                # that suggests that it has already been upduated in a
+                # previous run and thus we do not need to rename the file
+                if(os.path.isfile("%s/images/%s_precursor.pdf" % \
+                        (outputFolder, mirName))):
+                    os.rename("%s/images/%s_precursor.pdf" % (outputFolder, 
+                        mirName), "%s/images/%s_precursor.pdf" % (outputFolder,
+                        similarityDict[mirName]))
 
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
@@ -439,6 +444,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                     # in miRBase, we will tag it as a member of this family
                     if(organism in organismList):
                         similarFlag = True
+                        print(mirName, similarityDict[mirName])
+                        print(organism)
                         line.append("New member of existing family")
                         line.append("%s-%s-like" % (organism, mirFamily))
 
@@ -457,11 +464,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                             # miRNA family that met the similarity
                             # requirement
                             toWrite = ""
-                            for organism in sorted(organismList):
-                                if(organism == organismList[-1]):
-                                    toWrite += "%s" % organism
+                            for similarOrganism in sorted(organismList):
+                                if(similarOrganism == organismList[-1]):
+                                    toWrite += "%s" % similarOrganism
                                 else:
-                                    toWrite += "%s " % organism
+                                    toWrite += "%s " % similarOrganism
 
                             line.append(toWrite)
 

@@ -74,7 +74,7 @@ def miRador():
     # and add all files that end with "chopped.txt" to to libFilenamesList
     if(libFolder):
         for file in os.listdir(libFolder):
-            if file.endswith("chopped.txt"):
+            if file.endswith(".txt"):
                 libFilenamesList.append("%s/%s" % (libFolder,
                     os.path.join(file)))
 
@@ -183,8 +183,6 @@ def miRador():
     LibList = []
 
     if(parallel):
-        nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
-        pool = multiprocessing.Pool(nproc)
 
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
@@ -207,12 +205,17 @@ def miRador():
         if(parallel):
             print("Running einverted in parallel")
 
+            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
+            pool = multiprocessing.Pool(nproc)
+
             res = pool.starmap_async(GenomeClass.runEinverted,
                 zip(repeat(einvertedPath), GenomeClass.genomeSeqList,
                 repeat(match), repeat(mismatch), repeat(gap), 
                 repeat(threshold), repeat(maxRepLen)))
 
             results = res.get()
+
+            pool.close()
 
             # Loop through the results and add the inverted repeat filenames
             # to their respective lists
@@ -307,11 +310,16 @@ def miRador():
 
         if(parallel):
             # Run mapSRNAsToIRs in parallel
+            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
+            pool = multiprocessing.Pool(nproc)
+
             res = pool.starmap_async(mapSRNAsToIRs.mapSRNAsToIRs,
                 zip(GenomeClass.IRDictByChr, Lib.mappedList,
                 repeat(Lib.libDict)))
 
             mappedTagsToPrecursors = res.get()
+
+            pool.close()
 
         else:
             for i in range(len(GenomeClass.chrDict)):
@@ -346,11 +354,16 @@ def miRador():
         # If we are running in parallel, run filterPrecursors in parallel.
         # Parallelize by chromosomes
         if(parallel):
+            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
+            pool = multiprocessing.Pool(nproc)
+
             res = pool.starmap_async(filterPrecursors.filterPrecursors,
                 zip(mappedTagsToPrecursors, GenomeClass.IRDictByChr,
                 repeat(overhang)))
 
             results = res.get()
+
+            pool.close()
 
             for chrName in sorted(GenomeClass.chrDict.keys()):
                 chrIndex = GenomeClass.chrDict[chrName]

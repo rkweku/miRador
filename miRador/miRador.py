@@ -104,15 +104,13 @@ def miRador():
     # it will also call setupMirBase.py to create download the current
     # version of miRBase if needed to prepare for the annotation of our
     # candidate miRNAs
-    #housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
-    #    libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
-    #    perlPath, outputFolder, version)
+    housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
+        libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
+        perlPath, outputFolder, version)
 
     # Call setup miRBase
 
     mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
-
-    """
 
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
@@ -366,7 +364,7 @@ def miRador():
     ################### Annotate candidate miRNAs ############################
 
     ##########################################################################
-    """
+
     print("Annotating candidate miRNAs")
 
     funcStart = time.time()

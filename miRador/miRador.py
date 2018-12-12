@@ -182,8 +182,6 @@ def miRador():
 
     LibList = []
 
-    if(parallel):
-
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
 
@@ -436,7 +434,7 @@ def miRador():
     ################### Annotate candidate miRNAs ############################
 
     ##########################################################################
-    
+
     print("Annotating candidate miRNAs")
 
     funcStart = time.time()

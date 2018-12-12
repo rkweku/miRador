@@ -207,16 +207,11 @@ def parsePrecursorGFF(filename):
         if(type == "miRNA"):
             name = attributes.split("Name=")[1].split(";")[0]
 
-            # Check to ensure a miRNA is not annotated twice in the GFF file.
-            # Report an error to the user if there is as there should not be
+            # Add the miRNA and its coordinates to mirBaseDict
             if(name in mirBaseDict):
-                print("Error. Found more than one miRNA with the same name.\n"\
-                    "%s was found twice in %s" % (name, filename))
-                sys.exit()
-
-            # Save the miRNA in mirBaseDict with the name as the key and its
-            # coordinates as the value
-            mirBaseDict[name] = (chrID, strand, start, end)
+                mirBaseDict[name].append((chrID, strand, start, end))
+            else:
+                mirBaseDict[name] = [(chrID, strand, start, end)]
 
     return(mirBaseDict)
 

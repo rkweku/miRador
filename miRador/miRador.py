@@ -98,6 +98,11 @@ def miRador():
     # modifications
     overhang = 2
 
+    # Call setup miRBase to initialize the miRBase folder and required
+    # files as well as populate a dictionary with miRBase miRNAs for the
+    # organism being studied
+    mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
+
     # Perform various housekeeping functions including the checks that all
     # external program dependencies exist, that files being referenced and
     # folders that willb e written to exist and are created. Additionally,
@@ -107,10 +112,6 @@ def miRador():
     housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
         perlPath, outputFolder, version)
-
-    # Call setup miRBase
-
-    mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
 
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
@@ -371,7 +372,7 @@ def miRador():
 
     subjectSequencesFilename = "miRBase/miRBaseMirnas.fa"
     queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
-    dbFilename = "miRBase/miRBaseMirnas/db"
+    dbFilename = "miRBase/miRBaseMirnas.db"
 
     # Check to see if the BLAST database needs to be updated
     updateFlag = annotateCandidates.checkNeedUpdateByDate(

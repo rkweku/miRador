@@ -24,8 +24,10 @@ from itertools import repeat
 import annotateCandidates
 import filterPrecursors
 import genome
+import housekeeping
 import library
 import mapSRNAsToIRs
+import setupMiRBase
 
 def miRador():
     """Parse configuration file and make necessary calls to the various
@@ -79,9 +81,8 @@ def miRador():
                     os.path.join(file)))
 
     # Grab the information for the BLAST variables
-    subjectSequencesFilename = config.get("BLAST", "subjectSequencesFilename")
-    dbFilename = config.get("BLAST", "dbFilename")
-    organism = config.get("BLAST", "organism")
+    organism = config.get("miRBase", "organism")
+    version = config.get("miRBase", "version", fallback = "CURRENT")
 
     parallel = int(config.get("General", "parallel"))
     nthreads = config.get("General", "nthreads")
@@ -97,90 +98,21 @@ def miRador():
     # modifications
     overhang = 2
 
-    ###########################################################################
+    # Perform various housekeeping functions including the checks that all
+    # external program dependencies exist, that files being referenced and
+    # folders that willb e written to exist and are created. Additionally,
+    # it will also call setupMirBase.py to create download the current
+    # version of miRBase if needed to prepare for the annotation of our
+    # candidate miRNAs
+    #housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
+    #    libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
+    #    perlPath, outputFolder, version)
 
-    ### Check the existence of all input files and that the paths to 
-    # external functions exist before running
+    # Call setup miRBase
 
-    # Make sure the genome file exists as defined
-    if(not os.path.isfile(genomeFilename)):
-        print("%s could not be found! Please check that the file path "\
-            "was input correctly" % genomeFilename)
-        sys.exit()
+    mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
 
-    # Do not allow execution if both libFilenamesString and libFolder
-    # are defined to anything other than empty strings
-    if(libFilenamesString and libFolder):
-        print("You specified both libName and libNamesList, but only one"\
-            "can exist. Delete one and try running again")
-        sys.exit()
-
-    # Loop through all libraries in libFilenamesList and confirm that they
-    # exist before running
-    for libName in libFilenamesList:
-        if(not os.path.isfile(libName)):
-            print("%s could not be found! Please check that the file path "\
-                "was input correctly" % libName)
-            sys.exit()
-
-    if(not shutil.which(bowtiePath)):
-        print("bowtie could not be found at the provided path: %s\nCorrect "\
-            "before running again" % bowtiePath)
-        sys.exit()
-
-    if(not shutil.which(bowtieBuildPath)):
-        print("bowtie-build could not be found at the provided path: %s\n"\
-            "Correct before running again" % bowtieBuildPath)
-        sys.exit()
-
-    if(not shutil.which(einvertedPath)):
-        print("einverted could not be found at the provided path: %s\n"\
-            "Correct before running again" % einvertedPath)
-        sys.exit()
-    
-    if(not shutil.which(perlPath)):
-        print("perl could not be found at the provided path: %s\n"\
-            "Correct before running again" % perlPath)
-        sys.exit()
-
-
-    ### Create the necessary folders if they don't already exist
-    # Create a path for genome if it does not exist already
-    if not os.path.isdir("genome"):
-        os.mkdir('genome')
-    # Create a path for the inverted repeat if it does not exist already
-    if(not os.path.isdir("invertedRepeats")):
-        os.mkdir("invertedRepeats")
-
-    # If the user has filled the outputFolder option, check to see if it
-    # has results from an older run and then delete them
-    if(outputFolder):
-        if(os.path.isdir("%s/libs" % outputFolder)):
-            shutil.rmtree("%s/libs" % outputFolder)
-        if(os.path.isdir("%s/images" % outputFolder)):
-            shutil.rmtree("%s/images" % outputFolder)
-        if(os.path.isfile("%s/finalAnnotatedCandidates.csv" % outputFolder)):
-            os.remove("%s/finalAnnotatedCandidates.csv" % outputFolder)
-        if(os.path.isfile("%s/preAnnotatedCandidates.csv" % outputFolder)):
-            os.remove("%s/preAnnotatedCandidates.csv" % outputFolder)
-        if(os.path.isfile("%s/preAnnotatedCandidates.fa" % outputFolder)):
-            os.remove("%s/preAnnotatedCandidates.fa" % outputFolder) 
-
-    ###########################################################################
-
-    # Create a path for an output folder if it does not exist already
-    # (Almost certainly shoul dnot as it would require the same run second)
-    else:
-        outputFolder = datetime.datetime.now().strftime(
-            'output_%Y-%m-%d_%H-%M-%S')
-    if not os.path.isdir(outputFolder):
-        os.mkdir(outputFolder)
-    if not os.path.isdir("%s/libs" % outputFolder):
-        os.mkdir("%s/libs" % outputFolder)
-    if not os.path.isdir("%s/images" % outputFolder):
-        os.mkdir("%s/images" % outputFolder)
-
-    LibList = []
+    """
 
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
@@ -434,12 +366,14 @@ def miRador():
     ################### Annotate candidate miRNAs ############################
 
     ##########################################################################
-
+    """
     print("Annotating candidate miRNAs")
 
     funcStart = time.time()
 
+    subjectSequencesFilename = "miRBase/miRBaseMirnas.fa"
     queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
+    dbFilename = "miRBase/miRBaseMirnas/db"
 
     # Check to see if the BLAST database needs to be updated
     updateFlag = annotateCandidates.checkNeedUpdateByDate(
@@ -477,8 +411,7 @@ def miRador():
 
     # Properly annotate the candidate miRNAs with the data in similarityDict
     annotateCandidates.annotateCandidates(outputFolder, similarityDict,
-        organism, numLibs)
-
+        organism, mirBaseDict, numLibs)
 
     funcEnd = time.time()
     execTime = round(funcEnd - funcStart, 2)

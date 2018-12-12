@@ -360,7 +360,8 @@ def createSimilarityDict(blastDict, organism):
 
     return(similarityDict)
 
-def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
+def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
+        numLibs):
     """Using the similarityDict, annotate the data in the pre-annotated file
     with the proper miRNA name, with the already existing family(ies) that
     the candidate miRNA likely belongs to, or the conservation of an existing
@@ -375,6 +376,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
             simply its known name if it already exists
         organism: First letter of genus and first two
             of the species
+        mirBaseDict: Dictionary of miRBase miRNAs and their coordinates for
+            this organism, if available (will be an empty dictionary if not)
         numLibs: The total number of libraries in the analysis
 
     """
@@ -407,8 +410,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
         mirName = line[0]
         chrName = line[1]
         strand = line[2]
+        position = line[3]
         libCount = 0
+        annotatedFlag = False
         identicalFlag = False
+        similarFlag = False
 
         # Check if the candidate miRNA name is in the similarityDict
         # to determine if it is completely novel or not
@@ -419,36 +425,72 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
             # replace the candidate name with the proper annotated name
             if(isinstance(similarityDict[mirName], list)):
                 identicalFlag = True
-                identicalList = []
+                identicalList = similarityDict[mirName]
+                copyList = []
 
-                line.append("Known")
+                # If mirBaseDict is populated, that means that we have
+                # positional information for this organism and thus
+                # can generate the most accurate annotations for this
+                # organism
+                if(mirBaseDict):
+                    for identicalMirna in identicalList:
+                        coordinates = mirBaseDict[identicalMirna]
+                        mirBaseChr = coordinates[0]
+                        mirBaseStrand = coordinates[1]
+                        mirBasePosition = coordinates[2]
 
-                # Loop through all identical tags and copy a line for it
-                # so that all known miRBase miRNAs matching this read
-                # can be found
-                for identicalMirna in similarityDict[mirName]:
-                    line[0] = identicalMirna
-                    identicalList.append(line[:])
+                        # Need to convert strand from +/- to w/c
+                        if(mirBaseStrand == "+"):
+                            mirBaseStrand = "w"
+                        elif(mirBaseStrand == "-"):
+                            mirBaseStrand = "c"
+                        # If there strand is not + or -, something is wrong
+                        # with this miRBase entry. We will not exit the run,
+                        # but we will report the issue to the user and
+                        # continue to the next tag
+                        else:
+                            print("Unrecognized strand of miRBase entry. "\
+                                "We will skip this entry, but please check "\
+                                "with the miRBase file %s.gff3 and miRNA "\
+                                "name %s" % (organism, identicalMirna))
+                            continue
 
-                # If the miRNA is known, update the image filename
-                # within the image folder to assist in quick identification
-                # with the given name in the final annotated csv file.
-                # But if the name with the candidate sequence does not exist,
-                # that suggests that it has already been upduated in a
-                # previous run and thus we do not need to rename the file
-                if(os.path.isfile("%s/images/%s_precursor.pdf" % \
-                        (outputFolder, mirName))):
-                    os.rename("%s/images/%s_precursor.pdf" % (outputFolder,
-                        mirName), "%s/images/%s_precursor.pdf" % (
-                        outputFolder, similarityDict[mirName][0]))
+                        # If the coordinates of the candidate miRNA meet the
+                        # coordinates of the miRBase miRNA, then this
+                        # candidate miRNA is this miRBase miRNA and we will
+                        # change the annotation to represent that
+                        if(chrName == mirBaseChr and strand == mirBaseStrand and
+                                position == mirBasePosition):
+                            line[0] = identicalMirna
+                            line.append("Known")
+                            annotatedFlag = True
 
-                    # Loop through the remaining identical miRNAs and copy
-                    # the precursor images
-                    for i in range(1, len(similarityDict[mirName])):
-                        shutil.copy("%s/images/%s_precursor.pdf" % (
-                            outputFolder, similarityDict[mirName][0]),
-                            "%s/images/%s_precursor.pdf" % (outputFolder,
-                            similarityDict[mirName][i]))
+                            # If the miRNA is known, update the image filename
+                            # within the image folder with its miRBase
+                            # annotated name. But if the name with the
+                            # candidate sequence does not exist, that suggests
+                            # that it has already been upduated in a previous
+                            # run and thus we do not need to rename the file
+                            if(os.path.isfile("%s/images/%s_precursor.pdf" % \
+                                    (outputFolder, mirName))):
+                                os.rename("%s/images/%s_precursor.pdf" % (
+                                    outputFolder, mirName), 
+                                    "%s/images/%s_precursor.pdf" % (
+                                    outputFolder, similarityDict[mirName][0]))
+
+                # If we did not find an annotated miRNA at this same position,
+                # we will annotate it in the final file as being identical
+                # to the following known miRNAs, but not at the same position
+                if(not annotatedFlag):
+                    print("HI")
+                    # Loop through all identical tags and copy a line for it
+                    # so that all known miRBase miRNAs matching this read
+                    # can be found
+                    line(append("Identical to the following known "\
+                        "miRNAs at different positions:"))
+                    for identicalMirna in similarityDict[mirName]:
+                        toAdd = "%s %s" % (toAdd, identicalMirna)
+                    line.append(toAdd)
 
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
@@ -461,7 +503,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
                     # sequence to one that is already known for this organism
                     # in miRBase, we will tag it as a member of this family
                     if(organism in organismList):
-                        identicalFlag = True
+                        similarFlag = True
                         line.append("New member of existing family")
                         line.append("%s-%s-like" % (organism, mirFamily))
 
@@ -495,7 +537,6 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
         # library. Thus, here we will literate through the results and
         # remove candidate miRNAs that were identified in just one library
         else:
-            identicalFlag = False
             for i in range(startIterIndex, len(line), 6):
                 if(float(line[i])):
                     libCount += 1
@@ -503,21 +544,13 @@ def annotateCandidates(outputFolder, similarityDict, organism, numLibs):
             if(libCount > 1 and libCount > float(numLibs * .1)):
                 line.append("Novel")
 
-        if(identicalFlag):
-            for identicalLine in identicalList:
-                for i in range(len(identicalLine)):
-                    if i == len(identicalLine) - 1:
-                        f.write("%s\n" % identicalLine[i])
-                    else:
-                        f.write("%s," % identicalLine[i])
-                
-        # If the line was not filtered but NOT identical to a known miRNA,
-        # write it to line to the output file
-        if(not identicalFlag and libCount > 1 and libCount >
-                float(numLibs * .1)):
+        # If identicalFlag is set, the prepared line will be written to the
+        # file. If identicalFlag is not set, then we will only write the line
+        # if it is present in more than 1 library, and at least 10% of the 
+        # analyzed libraries
+        if(identicalFlag or (libCount > 1 and libCount > float(numLibs * .1))):
             for i in range(len(line)):
                 if i == len(line) - 1:
                     f.write("%s\n" % line[i])
                 else:
                     f.write("%s," % line[i])
-

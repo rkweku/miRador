@@ -205,6 +205,11 @@ def parsePrecursorGFF(filename):
         # based upon their position, so only add sequences to
         # mirBaseDict if it is in a line with type miRNA
         if(type == "miRNA"):
+            # We will split the name on 'Name', but it should be abundantly
+            # clear here that this will NOT work on non GFF3 files in miRBaes
+            # as those appear to use ID rather than Name, and they also put
+            # the names in quotes. If miRBase also chooses to change the
+            # field, this could result in a failure
             name = attributes.split("Name=")[1].split(";")[0]
 
             # Add the miRNA and its coordinates to mirBaseDict

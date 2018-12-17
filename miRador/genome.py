@@ -381,3 +381,5 @@ class Genome:
             for toDelete in garbage:
                 if os.path.exists(toDelete):
                     os.remove(toDelete)
+
+        return(IRCounter)

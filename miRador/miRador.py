@@ -105,10 +105,7 @@ def miRador():
 
     # Perform various housekeeping functions including the checks that all
     # external program dependencies exist, that files being referenced and
-    # folders that willb e written to exist and are created. Additionally,
-    # it will also call setupMirBase.py to create download the current
-    # version of miRBase if needed to prepare for the annotation of our
-    # candidate miRNAs
+    # folders that willb e written to exist and are created. 
     housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
         perlPath, outputFolder, version)
@@ -122,8 +119,7 @@ def miRador():
 
     ##########################################################################
 
-    # If not set to run in parallel, run the sequential function
-    # for einverted
+    # Run EInverted if the flag is set
     if(runEInvertedFlag):
         # Create an empty list for both the inverted repeat FASTA files
         # and alignment files
@@ -131,7 +127,7 @@ def miRador():
         IRAlignmentFilenamesList = []
 
         # If parallel is set, run einverted using the parallel version
-        if(parallel):
+        if(False):
             print("Running einverted in parallel")
 
             nproc = int(round(int(multiprocessing.cpu_count()*.5),1))

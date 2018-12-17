@@ -92,9 +92,9 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                         totalAbun, proportion))
 
 def findSequenceInIR(sequence, IRArm, tagLength):
-    """  If a sequence cannot be found in a simple search in an inverted
+    """If a sequence cannot be found in a simple search in an inverted
     repeat arm, it is because there are gaps that interrupt the sequence.
-    Thus, we must do some work to find the tag, WITH gaps, as wel as the
+    Thus, we must do some work to find the tag, WITH gaps, as well as the
     start and end positions of the tag with gaps to identify potential
     duplexes
 
@@ -522,12 +522,9 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
 
                 # If we are unable to find the sequences in the
                 # IR arm, we know it is for one of two     
-                # possibilities. Because we allow 1 mismatch in 
-                # bowtie by default, we know that it is possilbe
-                # that the sRNA that is mapped to this position
-                # may not be exact with the IR. Also, there can
-                # be a gap in the alignment, so we must identify
-                # which case (if not both) it is before proceeding
+                # possibilities. Because there can be gaps in the
+                # alignment, so we must identify which case (if not
+                # both) it is before proceeding
                 if(sequence5 not in arm5):
                     sequence5, local5Start, local5End = \
                         findSequenceInIR(sequence5, arm5, tag5Length)
@@ -672,8 +669,10 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                     # yet exist. The valu will be a list of 
                                     # duplexes found in the precursor, but the
                                     # first element will be the IR coordinates
-                                    if(precursorName not in precursorsWithDuplex):
-                                        precursorsWithDuplex[precursorName] = {}
+                                    if(precursorName not in
+                                            precursorsWithDuplex):
+                                        precursorsWithDuplex[precursorName] = \
+                                            {}
 
                                     precursorsWithDuplex[precursorName][\
                                         mapped5Tag[0]] = duplex
@@ -684,15 +683,19 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                     # add the duplex to the candidates
                                     # dictionary
                                     # Additionally, put a small abundance
-                                    # filter of 5
+                                    # filter of 5 (technically not used with
+                                    # the tag5Abun filter of 10 above)
                                     if(proportion >= .75 and tag5Abun >= 5):
                                         # Add the precursor name as a key to
                                         # finalCandidates if it does not
-                                        # yet exist. The value will be a list of 
-                                        # duplexes found in the precursor, but the
-                                        # first element will be the IR coordinates
-                                        if(precursorName not in finalCandidates):
-                                            finalCandidates[precursorName] = {}
+                                        # yet exist. The value will be a list
+                                        # of duplexes found in the precursor,
+                                        # but the first element will be the IR
+                                        # coordinates
+                                        if(precursorName not in
+                                                finalCandidates):
+                                            finalCandidates[precursorName] = \
+                                                {}
 
                                         finalCandidates[precursorName][\
                                             mapped5Tag[0]] = duplex
@@ -712,8 +715,10 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                     # yet exist. The valu will be a list of 
                                     # duplexes found in the precursor, but the
                                     # first element will be the IR coordinates
-                                    if(precursorName not in precursorsWithDuplex):
-                                        precursorsWithDuplex[precursorName] = {}
+                                    if(precursorName not in
+                                            precursorsWithDuplex):
+                                        precursorsWithDuplex[precursorName] = \
+                                            {}
 
                                     precursorsWithDuplex[precursorName][\
                                         mapped3Tag[0]] = duplex
@@ -724,15 +729,19 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                     # add the duplex to the candidates
                                     # dictionary
                                     # Additionally, put a small abundance
-                                    # filter of 5
+                                    # filter of 5. Technically not used now
+                                    # with the tag3Abun filter of 10 above
                                     if(proportion >= .75 and tag3Abun >= 5):
                                         # Add the precursor name as a key to
                                         # finalCandidates if it does not
                                         # yet exist. The valu will be a list of 
-                                        # duplexes found in the precursor, but the
-                                        # first element will be the IR coordinates
-                                        if(precursorName not in finalCandidates):
-                                            finalCandidates[precursorName] = {}
+                                        # duplexes found in the precursor, but
+                                        # the first element will be the IR
+                                        # coordinates
+                                        if(precursorName not in
+                                                finalCandidates):
+                                            finalCandidates[precursorName] = \
+                                                {}
 
                                         finalCandidates[precursorName][
                                             mapped3Tag[0]] = duplex

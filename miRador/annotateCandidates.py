@@ -397,6 +397,13 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
     if(mirBaseDict):
         # Loop through all identical miRNA sequences
         for identicalMirna in identicalList:
+            # It turns out that there can be annotated miRNAs in miRBase
+            # that do not exist in the gff file, so do a check to ensure
+            # that the identical miRNA exists in mirBaseDict prior to
+            # entering this loop
+            if(identicalMirna not in mirBaseDict):
+                continue
+
             # Loop through all coordinates that this specific miRNA
             # can be found
             for coordinates in mirBaseDict[identicalMirna]:

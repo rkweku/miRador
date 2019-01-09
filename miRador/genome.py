@@ -9,7 +9,6 @@ class Genome:
 
     def __init__(self, filename, bowtieBuildPath):
         self.filename = filename
-        self.chrDict = {}
 
         ### Initialize several output folders if they do not exist yet
         # Create a path for genome if it does not exist already
@@ -26,36 +25,39 @@ class Genome:
             os.path.splitext(os.path.basename(self.filename))[0]
         self.IRAlignmentFilename = "invertedRepeats/%s_Inverted_Aligns.inv" %\
             os.path.splitext(os.path.basename(self.filename))[0]
-        
-        self.genomeSeqList = self.readFasta(self.filename)
 
+        # Split the genome file into multiple files - one for each chromosome        
+        self.chrFilenamesList, self.chrDict = self.splitGenomeFasta()
         # Create an empty dictionary in IRDictByChr for as many chromosomes
         # exist
         self.IRDictByChr = [{} for i in range(len(self.chrDict))]
 
         # Build the bowtie index if it does not exist yet
-        self.indexFilename = self.buildBowtieIndex(self.filename,
-            bowtieBuildPath)
+        self.indexFilename = self.buildBowtieIndex(bowtieBuildPath)
 
-    def readFasta(self, filename):
-        """Read a genome FASTA file into memory as a list
+    def splitGenomeFasta(self):
+        """Split the genome file into multiple files, where each chromosome
+           is its own file
 
-        Args:
-            filename: Name of the file to be read
         Returns:
-            Variable fastaList containing the genome file as a list of tuples
-            where the first element of each tuple  is the chromosome name
-            and the second is the full chromosome sequence
+            List of filenames where each chromosome was written to and
+            a dictionary giving index value for each chromosome as it will
+            appear in a list
 
         """
 
-        # Create an empty list to hold full genome FASTA file
-        fastaList = []
-        count = 0
+        # Create an empty list to hold the chromosome filenames
+        chrFilenamesList = []
+        counter = 1
         emptyCount = 0
 
-        # Read the full fil into fastaFil so that we can parse on '>'
-        f = open(filename, "r")
+        # Initialize a dictionary to be used to link the chromosome
+        # name with its positional locations in list data structures like
+        # IRDictByChr
+        chrDict = {}
+
+        # Read the full file into fastaFile so that we can parse on '>'
+        f = open(self.filename, "r")
         fastaFile = f.read()
         f.close()
 
@@ -70,27 +72,26 @@ class Genome:
             # chromosomes, but the variable name will at least indicate
             # that
             chrName = chromoInfo[0].split()[0]
-            # Add seqID to chrDict for indexing of chromosomes
-            self.chrDict[chrName] = count
+            # Add seqID to chrDict for indexing of chromosomes. Use same
+            # indexing as the temp sequence name, so subtract 1 as index
+            # starts at 0 on lists
+            chrDict[chrName] = counter - 1
 
-            # Strip the newline character from the sequence
-            sequence = chromoInfo[2].replace('\n','').strip()
+            # Remove any trailing characters from the sequence
+            sequence = chromoInfo[2].rstrip()
 
-            # Increment the sequence counter
-            count += 1
-            # If the sequence exists, append the sequence ID and the
-            # matching sequence to fastaList 
-            if(sequence):
-                fastaList.append((chrName, sequence))
+            # Create a file for the chromosome and write it to a file
+            splitFilename = "genome/%s_%s.fa" % (os.path.splitext(
+                os.path.basename(self.filename))[0], counter)
+            f_out = open(splitFilename, 'w')
+            f_out.write('>%s\n%s\n' % (chrName, sequence))
+            f_out.close()
 
-            else:
-                emptyCount += 1
+            chrFilenamesList.append(splitFilename)
 
-        print("Total entries in File: %s | Total empty entries in file: %s" %
-            (count, emptyCount))
-        print("Total entries in the genome FASTA list: %s" % (len(fastaList)))
+            counter += 1
 
-        return(fastaList)
+        return(chrFilenamesList, chrDict)
 
     def checkBowtieNeedsUpdate(self, indexFilename):
         """Check if the index filename already exists. Return true if it
@@ -116,12 +117,11 @@ class Genome:
 
         return(True) 
 
-    def buildBowtieIndex(self, filename, bowtieBuildPath):
+    def buildBowtieIndex(self, bowtieBuildPath):
         """Code to create a bowtie index for the inverited repeats file.
 
         Args:
-            filename: Path and name of the inverted repeats to generate 
-                bowtie index for
+            bowtieBuildPath: Path of bowtie-build
         Returns:
             Path of bowtie index
 
@@ -130,99 +130,25 @@ class Genome:
         # Set the index filename. Remove any file extension and folders
         # from the filename path to ensure the index file is written
         # to the correct folder that is hardcoded here
-        filenameStripped = os.path.splitext(filename.split('/')[-1])[0]
+        filenameStripped = os.path.splitext(self.filename.split('/')[-1])[0]
         indexFilename = "genome/bowtieIndex/%s" % (filenameStripped)
 
         if(self.checkBowtieNeedsUpdate(indexFilename)):
-            print("Building a bowtie index for %s" % (filename))
+            print("Building a bowtie index for %s" % (self.filename))
             with open("genome/bowtieIndex/%s_bowtiebuild.log" %\
                     filenameStripped, 'w') as logFile:
-                returnCode = subprocess.call([bowtieBuildPath, filename,
+                returnCode = subprocess.call([bowtieBuildPath, self.filename,
                     indexFilename], stdout = logFile)
 
             if(returnCode):
                 print("Something went wrong when running bowtie-build. "\
-                    "Command was\n%s %s %s" % (bowtieBuildPath, filename,
+                    "Command was\n%s %s %s" % (bowtieBuildPath, self.filename,
                     indexFilename))
                 sys.exit()
 
             logFile.close()
 
         return(indexFilename)
-
-    def runEinverted(self, einvertedPath, chrAndSeq, match, mismatch, gap,
-            threshold, maxRepLen):
-        """Fuunction to run einverted for a sequence
-        
-        Args:
-            chrAndSeq: A tuple where the firstt element of the tuple is 
-                the chr (or sequence name) and the second is the sequence
-            match: Score to pass to einverted for a match
-            mismatch: Penalty score to pass to einverted for a mismatch
-            gap: Score to pass to einverted for a gap
-            threshold: Minimum total score an inverted repeat must have
-                for einverted to record it
-            maxRepLen: Maximum length an inverted repeat can have
-
-        Returns:
-            The name of the output FASTA file that einverted created, and
-            the name of the alignment output file that einverted created.
-
-        """
-
-        outputFastaFilenamesList = []
-        outputAlignmentFilenamesLis = []
-
-        # Open FNULL to suppress the output of einverted becuase we do not
-        # really need to know it is running for each proc
-        FNULL = open(os.devnull, 'w')
-
-        # Separate the name and sequence from the tuple
-        name = chrAndSeq[0]
-        seq = chrAndSeq[1]
-
-        # Each sequence needs to be in its own fasta file, so we will
-        # first create temp input files for each sequence prior to calling
-        # einverted
-        tempInput = "invertedRepeats/%s.fa" % name
-        f_out = open(tempInput,'w')
-        f_out.write('>%s\n%s\n' % (name,seq))
-        f_out.close()
-
-        # Names of temporary output files to store results prior to merging
-        outputFastaFilename = "invertedRepeats/%s.fa.temp" % name
-        outputAlignmentFilename = "invertedRepeats/%s.alignment.temp" % \
-            name
-
-        # Call einverted utilizing this current sequence with the user
-        # defined arguments from the config file.
-        returnCode = subprocess.call([einvertedPath, "-sequence", tempInput,
-            "-gap", str(gap), "-threshold", str(threshold), "-match",
-            str(match), "-mismatch", str(mismatch), "-maxrepeat",
-            str(maxRepLen), "-outfile", outputAlignmentFilename,
-            "-outseq", outputFastaFilename], stdout=FNULL,
-            stderr=subprocess.STDOUT)
-
-        # If a return code of anything but 0 is returned, it means there
-        # was a problem and it should be investigated. Temp files wiill
-        # remain from the run to assist in the debugging process
-        if(returnCode != 0):
-            print("Something went wrong when running einverted. Command was\n"\
-                "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
-                "%s -maxrepeat %s -outfil %s -outseq %s" % (einvertedPath,
-                tempInput, gap, threshold, match, mismatch, maxRepLen,
-                outputAlignmentFilename, outputFastaFilename))
-            sys.exit()
-
-        # Delete the temporary FASTA file that was created so that
-        # we could run einverted for this chromosome
-        if os.path.exists(tempInput):
-            os.remove(tempInput)
-
-        # Close FNULL
-        FNULL.close()
-
-        return(outputFastaFilename, outputAlignmentFilename)
 
     def combineIRTempFiles(self, IRFastaFilenamesList,
             IRAlignmentFilenamesList, runEInvertedFlag):
@@ -275,7 +201,7 @@ class Genome:
                 # One such filter is to prevent complex duplex with no
                 # secondary stems or large internal loops.
                 # I can include a processing step when counter % 5 is 3 
-                # to search for more than 5 '|' in a row
+                # to search for more than 5 '-' in a row
                 for line in alignmentFile:
                     toWriteList.append(line)
 
@@ -312,13 +238,6 @@ class Genome:
                         hairpin5 = parsedLine[1].upper()
                         end5 = int(parsedLine[2])
 
-                        # We cannot have a precursor that has secondary
-                        # stems or large loops within. Our criteria
-                        # calls for no larger than 6 nucleotides in a row,
-                        # so skip these precursors if we see them
-                        #if("------" in hairpin5):
-                        #    break
-
                     # The alignment between the two strands is given in
                     # the 3rd line of the alignment.
                     elif(counter % 5 == 3):
@@ -337,31 +256,31 @@ class Genome:
                         # stems or large loops within. Our criteria
                         # calls for no larger than 6 nucleotides in a row,
                         # so skip these precursors if we see them
-                        #if("------" in hairpin3):
-                        #    break
+                        if("------" not in hairpin3 and "------" not in 
+                                hairpin5):
 
-                        # Get the index of the chromosome to add the
-                        # inverted repeat to
-                        index = self.chrDict[chrName]
+                            # Get the index of the chromosome to add the
+                            # inverted repeat to
+                            index = self.chrDict[chrName]
 
-                        # Add the inverted repeat to the appropriate
-                        # list within IRDictByChr
-                        IRName = "precursor-%s" % IRCounter
-                        self.IRDictByChr[index][IRName] = (start5, end5,
-                            start3, end3, loop, 'w', hairpin5,
-                            alignmentIndicators, hairpin3)
+                            # Add the inverted repeat to the appropriate
+                            # list within IRDictByChr
+                            IRName = "precursor-%s" % IRCounter
+                            self.IRDictByChr[index][IRName] = (start5, end5,
+                                start3, end3, loop, 'w', hairpin5,
+                                alignmentIndicators, hairpin3)
 
-                        IRCounter += 1
-                        IRName = "precursor-%s" % IRCounter
-                        self.IRDictByChr[index][IRName] = (start5, end5,
-                            start3, end3, loop, 'c', hairpin5,
-                            alignmentIndicators, hairpin3)
+                            IRCounter += 1
+                            IRName = "precursor-%s" % IRCounter
+                            self.IRDictByChr[index][IRName] = (start5, end5,
+                                start3, end3, loop, 'c', hairpin5,
+                                alignmentIndicators, hairpin3)
 
-                        if(runEInvertedFlag):
-                            for entry in toWriteList:
-                                align_out.write(entry)
-                        toWriteList = []
-                        IRCounter += 1
+                            if(runEInvertedFlag):
+                                for entry in toWriteList:
+                                    align_out.write(entry)
+                            toWriteList = []
+                            IRCounter += 1
 
                     # Increment the counter
                     counter += 1 
@@ -383,3 +302,62 @@ class Genome:
                     os.remove(toDelete)
 
         return(IRCounter)
+
+
+def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
+        threshold, maxRepLen):
+    """Fuunction to run einverted for a single chromosome
+    
+    Args:
+        chrFilename: The path to the individual chromosome that will
+            be run through einverted
+        match: Score to pass to einverted for a match
+        mismatch: Penalty score to pass to einverted for a mismatch
+        gap: Score to pass to einverted for a gap
+        threshold: Minimum total score an inverted repeat must have
+            for einverted to record it
+        maxRepLen: Maximum length an inverted repeat can have
+
+    Returns:
+        The name of the output FASTA file that einverted created, and
+        the name of the alignment output file that einverted created.
+
+    """
+
+    outputFastaFilenamesList = []
+    outputAlignmentFilenamesLis = []
+
+    # Open FNULL to suppress the output of einverted becuase we do not
+    # really need to know it is running for each proc
+    FNULL = open(os.devnull, 'w')
+
+    # Names of temporary output files to store results prior to merging
+    outputFastaFilename = "invertedRepeats/%s.fa.temp" % os.path.splitext(
+        os.path.basename(chrFilename))[0]
+    outputAlignmentFilename = "invertedRepeats/%s.alignment.temp" % \
+        os.path.splitext(os.path.basename(chrFilename))[0]
+
+    # Call einverted utilizing this current sequence with the user
+    # defined arguments from the config file.
+    returnCode = subprocess.call([einvertedPath, "-sequence", chrFilename,
+        "-gap", str(gap), "-threshold", str(threshold), "-match",
+        str(match), "-mismatch", str(mismatch), "-maxrepeat",
+        str(maxRepLen), "-outfile", outputAlignmentFilename,
+        "-outseq", outputFastaFilename], stdout=FNULL,
+        stderr=subprocess.STDOUT)
+
+    # If a return code of anything but 0 is returned, it means there
+    # was a problem and it should be investigated. Temp files wiill
+    # remain from the run to assist in the debugging process
+    if(returnCode != 0):
+        print("Something went wrong when running einverted. Command was\n"\
+            "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
+            "%s -maxrepeat %s -outfil %s -outseq %s" % (einvertedPath,
+            tempInput, gap, threshold, match, mismatch, maxRepLen,
+            outputAlignmentFilename, outputFastaFilename))
+        sys.exit()
+
+    # Close FNULL
+    FNULL.close()
+
+    return(outputFastaFilename, outputAlignmentFilename)

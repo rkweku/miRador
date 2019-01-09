@@ -594,7 +594,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                         if(oldSequence3 != sequence3.replace('-','')):
                             print("findSequenceInIR messed up for %s. "\
                                 "Contact Reza to debug" % oldSequence3)
-                            print(precursorName, oldSequence3, sequence3, local3Start, local3End)
+                            print(precursorName, oldSequence3, sequence3,
+                                local3Start, local3End)
                             sys.exit()
 
                         # If there is a 3' overhang on either the sequence,
@@ -794,7 +795,7 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
             mirName)
 
 def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
-        IRDictByChr, libFilenamesList, chrDict, genomeSeqList, perlPath):
+        IRDictByChr, libFilenamesList, chrDict, chrFilenamesList, perlPath):
     """Write the candidate miRNAs to the provided filename
 
     Args:
@@ -809,9 +810,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
         libFilenamesList: A list of the library filenames used for predictions
         chrDict: Dictionary of chromosome names as the key and their index
             in a list for many variables
-        genomeSeqList: List of tuples containing a chromosome name in the
-            first position and the entire chromosome sequence in the
-            second
+        chrFilenamesList: List of filenames containing the chromosomes of
+            the genome being analyzed
 
     """
 
@@ -933,7 +933,12 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     ### Draw miRNA duplex on its precursor
                     # Get precursor sequence as a subsequence of the entire
                     # chromosome sequence
-                    precursorSeq = genomeSeqList[chrIndex][1][start5 - 1:end3]
+                    with open(chrFilenamesList[chrIndex], "r") as chromFile:
+                        wholeFile = chromFile.read()
+                        sequence = wholeFile.partition('\n')[2]
+                        sequence = sequence.rstrip()
+
+                    precursorSeq = sequence[start5 - 1:end3]
                     # If the strand is c, we need to reverse complement it
                     # in order to find the actual miRNA and * sequence on it
                     if(strand == 'c'):

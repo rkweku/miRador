@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3.3
 
-# miRunner is the miRNA prediction script within the miRador package.
+# miRador is a plant miRNA prediction pipeline.
 # It functions by first identifying inverted repeats within the genome.
 # Then, it maps all small RNAs to the identified inverted repeats to create
 # a list of candidate miRNAs.
@@ -76,7 +76,7 @@ def miRador():
     # and add all files that end with "chopped.txt" to to libFilenamesList
     if(libFolder):
         for file in os.listdir(libFolder):
-            if file.endswith(".txt"):
+            if file.endswith("chopped.txt"):
                 libFilenamesList.append("%s/%s" % (libFolder,
                     os.path.join(file)))
 
@@ -110,6 +110,10 @@ def miRador():
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
         perlPath, outputFolder, version)
 
+    # Set the number of cores, if parallel is on
+    if(parallel):
+        nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
+
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
 
@@ -127,15 +131,17 @@ def miRador():
         IRAlignmentFilenamesList = []
 
         # If parallel is set, run einverted using the parallel version
-        if(False):
+        if(parallel):
             print("Running einverted in parallel")
 
-            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
-            pool = multiprocessing.Pool(nproc)
+            if(len(GenomeClass.chrFilenamesList) < nproc):
+                pool = multiprocessing.Pool(len(GenomeClass.chrFilenamesList))
+            else:
+                pool = multiprocessing.Pool(nproc)
 
-            res = pool.starmap_async(GenomeClass.runEinverted,
-                zip(repeat(einvertedPath), GenomeClass.genomeSeqList,
-                repeat(match), repeat(mismatch), repeat(gap), 
+            res = pool.starmap_async(genome.runEinverted,
+                zip(repeat(einvertedPath), GenomeClass.chrFilenamesList,
+                repeat(match), repeat(mismatch), repeat(gap),
                 repeat(threshold), repeat(maxRepLen)))
 
             results = res.get()
@@ -151,9 +157,11 @@ def miRador():
         else:
             print("Running einverted sequentially")
 
-            for entry in GenomeClass.genomeSeqList:
-                IRName, IRSeq = GenomeClass.runEinverted(einvertedPath, 
-                    entry, match, mismatch, gap, threshold, maxRepLen)
+            # Loop through each chromosome and run einverted on each, one at 
+            # a time
+            for chrFilename in GenomeClass.chrFilenamesList:
+                IRName, IRSeq = genome.runEinverted(einvertedPath, 
+                    chrFilename, match, mismatch, gap, threshold, maxRepLen)
 
                 IRFastaFilenamesList.append(IRName)
                 IRAlignmentFilenamesList.append(IRSeq)
@@ -233,9 +241,12 @@ def miRador():
 
         mappedTagsToPrecursors = []
 
-        if(parallel):
+        # Parallelization of this module has been removed as the overhead of
+        # transferring mappedList to each proc is quite significant while
+        # its runtime on one proc is extremely quick
+        """
+        if(False):
             # Run mapSRNAsToIRs in parallel
-            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
             pool = multiprocessing.Pool(nproc)
 
             res = pool.starmap_async(mapSRNAsToIRs.mapSRNAsToIRs,
@@ -245,11 +256,19 @@ def miRador():
             mappedTagsToPrecursors = res.get()
 
             pool.close()
+        """
 
-        else:
-            for i in range(len(GenomeClass.chrDict)):
-                mappedTagsToPrecursors.append(mapSRNAsToIRs.mapSRNAsToIRs(
-                    GenomeClass.IRDictByChr[i], Lib.mappedList[i], Lib.libDict))
+        # Map the sRNAs for this library to the inverted repeats predicted
+        # for this genome.
+        # Note that the format of this where we run one chromosome at a
+        # time is a holdover from the parallelization effort that was made
+        # for this function. While this for loop can now be moved into the
+        # function, I am keeping it outside quite simply because the tabbing
+        # within this function became quite deep and I'd rather avoid going
+        # another level deeper
+        for i in range(len(GenomeClass.chrDict)):
+            mappedTagsToPrecursors.append(mapSRNAsToIRs.mapSRNAsToIRs(
+                GenomeClass.IRDictByChr[i], Lib.mappedList[i], Lib.libDict))
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
@@ -276,10 +295,11 @@ def miRador():
 
         funcStart = time.time()
 
-        # If we are running in parallel, run filterPrecursors in parallel.
-        # Parallelize by chromosomes
-        if(parallel):
-            nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
+        # Parallelization of this module has been removed as the overhead of
+        # transferring mappedList to each proc is quite significant while
+        # its runtime on one proc is extremely quick
+        """
+        if(False):
             pool = multiprocessing.Pool(nproc)
 
             res = pool.starmap_async(filterPrecursors.filterPrecursors,
@@ -298,20 +318,26 @@ def miRador():
                      = results[chrIndex][0]
                 filteredPrecursorsDict[libNameNoFolders][chrName] = \
                     results[chrIndex][1]
+        """
 
-        # If running sequentially, run filterPrecursors sequentially
-        else:
-            for chrName in sorted(GenomeClass.chrDict.keys()):
-                # Get the index of each chromosome that will be processed
-                # sequentially
-                chrIndex = GenomeClass.chrDict[chrName]
-                precursorList = mappedTagsToPrecursors[chrIndex]
-                IRDict = GenomeClass.IRDictByChr[chrIndex]
+        # Filter the precursors, one chromosome at a time
+        # Note that the format of this where we run one chromosome at a
+        # time is a holdover from the parallelization effort that was made
+        # for this function. While this for loop can now be moved into the
+        # function, I am keeping it outside quite simply because the tabbing
+        # within this function became quite deep and I'd rather avoid going
+        # another level deeper
+        for chrName in sorted(GenomeClass.chrDict.keys()):
+            # Get the index of each chromosome that will be processed
+            # sequentially
+            chrIndex = GenomeClass.chrDict[chrName]
+            precursorList = mappedTagsToPrecursors[chrIndex]
+            IRDict = GenomeClass.IRDictByChr[chrIndex]
 
-                precursorsWithDuplexDictByLib[libNameNoFolders][chrIndex], \
-                    filteredPrecursorsDict[libNameNoFolders][chrName] = \
-                    filterPrecursors.filterPrecursors(precursorList, IRDict,
-                    overhang)
+            precursorsWithDuplexDictByLib[libNameNoFolders][chrIndex], \
+                filteredPrecursorsDict[libNameNoFolders][chrName] = \
+                filterPrecursors.filterPrecursors(precursorList, IRDict,
+                overhang)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
@@ -354,7 +380,7 @@ def miRador():
 
     filterPrecursors.writeCandidates(outputFolder, candidatesByLibDict,
         filteredPrecursorsDict, GenomeClass.IRDictByChr, libFilenamesList,
-        GenomeClass.chrDict, GenomeClass.genomeSeqList, perlPath)
+        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath)
 
     ##########################################################################
 

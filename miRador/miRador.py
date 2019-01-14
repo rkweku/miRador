@@ -76,7 +76,7 @@ def miRador():
     # and add all files that end with "chopped.txt" to to libFilenamesList
     if(libFolder):
         for file in os.listdir(libFolder):
-            if file.endswith("chopped.txt"):
+            if file.endswith(".txt"):
                 libFilenamesList.append("%s/%s" % (libFolder,
                     os.path.join(file)))
 
@@ -184,7 +184,6 @@ def miRador():
  
     #########################################################################
 
-    precursorsWithDuplexDictByLib = {}
     filteredPrecursorsDict = {}
     candidatesByLibDict = {}
 
@@ -199,11 +198,9 @@ def miRador():
         print("Beginning to process %s." % libraryFilename)
         Lib = library.Library(libraryFilename, GenomeClass.chrDict)
 
-        precursorsWithDuplexDictByLib[libNameNoFolders] = {}
         filteredPrecursorsDict[libNameNoFolders] = {}
 
         for chrName in sorted(GenomeClass.chrDict.keys()):
-            precursorsWithDuplexDictByLib[libNameNoFolders][chrName] = {}
             filteredPrecursorsDict[libNameNoFolders][chrName] = {}
 
         # Map small RNAs to the genome
@@ -244,19 +241,17 @@ def miRador():
         # Parallelization of this module has been removed as the overhead of
         # transferring mappedList to each proc is quite significant while
         # its runtime on one proc is extremely quick
-        """
-        if(False):
-            # Run mapSRNAsToIRs in parallel
-            pool = multiprocessing.Pool(nproc)
-
-            res = pool.starmap_async(mapSRNAsToIRs.mapSRNAsToIRs,
-                zip(GenomeClass.IRDictByChr, Lib.mappedList,
-                repeat(Lib.libDict)))
-
-            mappedTagsToPrecursors = res.get()
-
-            pool.close()
-        """
+#        if(parallel):
+#            # Run mapSRNAsToIRs in parallel
+#            pool = multiprocessing.Pool(nproc)
+#
+#            res = pool.starmap_async(mapSRNAsToIRs.mapSRNAsToIRs,
+#                zip(GenomeClass.IRDictByChr, Lib.mappedList,
+#                repeat(Lib.libDict)))
+#
+#            mappedTagsToPrecursors = res.get()
+#
+#            pool.close()
 
         # Map the sRNAs for this library to the inverted repeats predicted
         # for this genome.
@@ -298,27 +293,23 @@ def miRador():
         # Parallelization of this module has been removed as the overhead of
         # transferring mappedList to each proc is quite significant while
         # its runtime on one proc is extremely quick
-        """
-        if(False):
-            pool = multiprocessing.Pool(nproc)
-
-            res = pool.starmap_async(filterPrecursors.filterPrecursors,
-                zip(mappedTagsToPrecursors, GenomeClass.IRDictByChr,
-                repeat(overhang)))
-
-            results = res.get()
-
-            pool.close()
-
-            for chrName in sorted(GenomeClass.chrDict.keys()):
-                chrIndex = GenomeClass.chrDict[chrName]
-
-                # Get the index of chrDict[chrName]
-                precursorsWithDuplexDictByLib[libNameNoFolders][chrName] \
-                     = results[chrIndex][0]
-                filteredPrecursorsDict[libNameNoFolders][chrName] = \
-                    results[chrIndex][1]
-        """
+#        if(parallel):
+#            pool = multiprocessing.Pool(nproc)
+#
+#            res = pool.starmap_async(filterPrecursors.filterPrecursors,
+#                zip(mappedTagsToPrecursors, GenomeClass.IRDictByChr,
+#                repeat(overhang)))
+#
+#            results = res.get()
+#
+#            pool.close()
+#
+#            for chrName in sorted(GenomeClass.chrDict.keys()):
+#                chrIndex = GenomeClass.chrDict[chrName]
+#
+#                # Get the index of chrDict[chrName]
+#                filteredPrecursorsDict[libNameNoFolders][chrName] = \
+#                    results[chrIndex][1]
 
         # Filter the precursors, one chromosome at a time
         # Note that the format of this where we run one chromosome at a
@@ -334,14 +325,13 @@ def miRador():
             precursorList = mappedTagsToPrecursors[chrIndex]
             IRDict = GenomeClass.IRDictByChr[chrIndex]
 
-            precursorsWithDuplexDictByLib[libNameNoFolders][chrIndex], \
-                filteredPrecursorsDict[libNameNoFolders][chrName] = \
+            filteredPrecursorsDict[libNameNoFolders][chrName] = \
                 filterPrecursors.filterPrecursors(precursorList, IRDict,
                 overhang)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to map filter inverted repeats: %s seconds" % (execTime))
+        print("Time to filter inverted repeats: %s seconds" % (execTime))
 
         ###
         # Prior to writing this library's results, add its miRNAs and

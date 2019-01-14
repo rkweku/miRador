@@ -449,18 +449,15 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
             to the precursor, identified by the precursor name
         IRDict: Dictionary of the inverted repeats in one chromosome
         overhang: Maximum length of overhang that a duplex can have
+    Returns:
+        Dictionary of all precursors and the miRNA:miRNA* duplexes within
+        that pass all filters
 
     """
 
-    # Though the intention is to remove all candidates that do not meet 
-    # all filter requirements, it is necessary to report to the user why
-    # certain precursors are removed. Thus, we create a variable here
-    # to contain all precursors that have an identifiable miRNA:miRNA*
-    # duplex prior to abundance filters. This means a duplex that
-    # fails alignment filters will not be contained here
-    precursorsWithDuplex = {}
+    # Initialize a dictionary to store our final candidaties that pass
+    # all filters for this library
     finalCandidates = {}
-    uniqueCandidatesList = {}
 
     # Begin to loop though all of the candidate precursors for the
     # various filters. Each loop begins on the chromosome dictionary
@@ -615,10 +612,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                 gapCount = getAlignment(arm5, arm3,
                                 alignStart, alignEnd)
                             
-                            # If the alignment between the overlapping
-                            # regions of the miRNA and miRNA* do not
-                            # exceed our alignment filters, add the
-                            # duplex to the precursorsWithDuplex filter
+                            # Only proceed if the alignment meets our filter
+                            # specifications
                             if(gapCount + mismatchCount + (wobbleCount * .5) 
                                    <= 5 and gapCount <= 3):
 
@@ -657,26 +652,13 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
 
                                 # The 5' mapping tag will be kept as a candidate
                                 # miRNA if it has at least an abundance of 10
-                                if(tag5Abun >= 10):
+                                if(tag5Abun >= 5):
                                     duplex = ("5p", mapped3Tag[0],
                                         candidate5Pos, candidate3Pos, tag5Abun,
                                         tag3Abun, matchCount, mismatchCount,
                                         wobbleCount, gapCount, variant5Abun,
                                         variant3Abun, totalAbun5, totalAbun3,
                                         loopAbun, proportion)
-
-                                    # Add the precursor name as a key to
-                                    # precursorsWithDuplex if it does not
-                                    # yet exist. The valu will be a list of 
-                                    # duplexes found in the precursor, but the
-                                    # first element will be the IR coordinates
-                                    if(precursorName not in
-                                            precursorsWithDuplex):
-                                        precursorsWithDuplex[precursorName] = \
-                                            {}
-
-                                    precursorsWithDuplex[precursorName][\
-                                        mapped5Tag[0]] = duplex
 
                                     # If the sum of the two tags in the
                                     # make up more than 75% of the read
@@ -703,26 +685,13 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
 
                                 # The 3' mapping tag will be kept as a candidate
                                 # miRNA if it has an abundance of at least 10
-                                if(tag3Abun >= 10):
+                                if(tag3Abun >= 5):
                                     duplex = ("3p", mapped5Tag[0],
                                         candidate3Pos, candidate5Pos, tag3Abun,
                                         tag5Abun, matchCount, mismatchCount,
                                         wobbleCount, gapCount, variant3Abun,
                                         variant5Abun, totalAbun3, totalAbun5,
                                         loopAbun, proportion)
-
-                                    # Add the precursor name as a key to
-                                    # precursorsWithDuplex if it does not
-                                    # yet exist. The valu will be a list of 
-                                    # duplexes found in the precursor, but the
-                                    # first element will be the IR coordinates
-                                    if(precursorName not in
-                                            precursorsWithDuplex):
-                                        precursorsWithDuplex[precursorName] = \
-                                            {}
-
-                                    precursorsWithDuplex[precursorName][\
-                                        mapped3Tag[0]] = duplex
 
                                     # If the sum of the two tags in the
                                     # make up more than 75% of the read
@@ -747,7 +716,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                         finalCandidates[precursorName][
                                             mapped3Tag[0]] = duplex
 
-    return(precursorsWithDuplex, finalCandidates)
+    return(finalCandidates)
 
 def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         perlPath):

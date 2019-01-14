@@ -1,10 +1,8 @@
-import fnmatch
 import ftplib
 import gzip
 import os
 import shutil
 import sys
-import urllib.request
 
 import annotateCandidates
 

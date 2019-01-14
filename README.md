@@ -32,6 +32,7 @@ Running miRador requires modifyinga configuration file, initially named `miRador
 |libFilenamesList         |        |List of library file names and their path for each                                            |
 |libFolder                |        |The name of the folder holding all of the chopped.txt files                                   |
 |organism                 |        |First letter of genus and first 2 letters of species                                          |
+|version                  |CURRENT |Version of miRBase to use for annotation                                                      |
 |parallel                 |        |Flag to utilize parallelization                                                               |
 |nthrads                  |        |Number of threads to utilize when running bowtie                                              |
 |bowtiePath               |        |Path of bowtie                                                                                |

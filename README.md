@@ -9,8 +9,11 @@ There are several dependencies of miRador, all of which are checked prior to run
 
 ### Standalone packages
 `bowtie`: http://bowtie-bio.sourceforge.net/index.shtml
+
 `perl`: https://www.perl.org/get.html
+
 `python3`: https://www.python.org/downloads/
+
 `ViennaRNA`: https://www.tbi.univie.ac.at/RNA/#download
 
 ### Python3 packages

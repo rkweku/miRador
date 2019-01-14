@@ -20,3 +20,28 @@ There are several dependencies of miRador, all of which are checked prior to run
 Running miRador requires modifyinga configuration file, initially named `miRador.ini`
 
 ### Options
+|Option                   |Default |Description                                                                                   |
+|-------------------------|--------|----------------------------------------------------------------------------------------------|
+|genomeFilename           |        |The path and name of the genome file                                                          |
+|runEInvertedFlag         |1       |Flag to be set if you wish to run EInverted                                                   |
+|gap                      |6       |EInverted score for gaps                                                                      |
+|match                    |3       |EInverted score for matches                                                                   |
+|mismatch                 |-4      |EInverted penalty score for mismatches                                                        |
+|threshold                |40      |Einverted scoring threshold for identifying inverted repeats                                  |
+|maxRepLen                |300     |Maximum length that an inverted repeat can be                                                 |
+|libFilenamesList         |        |List of library file names and their path for each                                            |
+|libFolder                |        |The name of the folder holding all of the chopped.txt files                                   |
+|organism                 |        |First letter of genus and first 2 letters of species                                          |
+|parallel                 |        |Flag to utilize parallelization                                                               |
+|nthrads                  |        |Number of threads to utilize when running bowtie                                              |
+|bowtiePath               |        |Path of bowtie                                                                                |
+|bowtieBuildPath          |        |Path of bowtie-build                                                                          |
+|einvertedPath            |        |Path of einverted                                                                             |
+|perlPath                 |        |Path of perl                                                                                  |
+|outputFolder             |        |Name of specific folder to write data to. *If folder exists, data within will be overwritten* |
+
+## Examples
+When all options in the configuration file are set, running miRador is quite simple. From the miRador base directory, type:
+```
+python3 miRador miRador.ini
+```

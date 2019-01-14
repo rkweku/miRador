@@ -32,8 +32,8 @@ Running miRador requires modifyinga configuration file, initially named `miRador
 |mismatch                 |-4      |EInverted penalty score for mismatches                                                        |
 |threshold                |40      |Einverted scoring threshold for identifying inverted repeats                                  |
 |maxRepLen                |300     |Maximum length that an inverted repeat can be                                                 |
-|libFilenamesList         |        |List of library file names and their path for each                                            |
-|libFolder                |        |The name of the folder holding all of the chopped.txt files                                   |
+|libFilenamesList         |        |List of library file names and their path for each. Should not be set if libFolder is set     |
+|libFolder                |        |The name of the folder holding all of the chopped.txt files. Should not be set if libFilenamesList is used|
 |organism                 |        |First letter of genus and first 2 letters of species                                          |
 |version                  |CURRENT |Version of miRBase to use for annotation                                                      |
 |parallel                 |        |Flag to utilize parallelization                                                               |

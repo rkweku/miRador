@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import sys
 
 class Genome:
     """
@@ -352,7 +353,7 @@ def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
     if(returnCode != 0):
         print("Something went wrong when running einverted. Command was\n"\
             "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
-            "%s -maxrepeat %s -outfil %s -outseq %s" % (einvertedPath,
+            "%s -maxrepeat %s -outfile %s -outseq %s" % (einvertedPath,
             chrFilename, gap, threshold, match, mismatch, maxRepLen,
             outputAlignmentFilename, outputFastaFilename))
         sys.exit()

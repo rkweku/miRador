@@ -196,13 +196,9 @@ class Genome:
                 # merged file and add them to IRDictByChr
 
                 toWriteList = []
-                ### *******************
-                # I've realized that I can do some filtering here before
-                # adding the IRs to the combined file.
-                # One such filter is to prevent complex duplex with no
-                # secondary stems or large internal loops.
-                # I can include a processing step when counter % 5 is 3 
-                # to search for more than 5 '-' in a row
+                # Parse each line of the alignment file. Alignments come
+                # in sets of 5 lines, so process 5 lines before to store
+                # into IRDict
                 for line in alignmentFile:
                     toWriteList.append(line)
 
@@ -217,7 +213,6 @@ class Genome:
                     # these lines here can fail and would need to be
                     # readjusted
                     if(counter % 5 == 1):
-
                         chrName = parsedLine[0].split(':')[0]
                         score = int(parsedLine[2].split(':')[0])
                         matches, totalBases = map(int,
@@ -253,35 +248,28 @@ class Genome:
                         end3 = int(parsedLine[0])
                         loop = int(start3) - int(end5) - 1
 
-                        # We cannot have a precursor that has secondary
-                        # stems or large loops within. Our criteria
-                        # calls for no larger than 6 nucleotides in a row,
-                        # so skip these precursors if we see them
-                        if("------" not in hairpin3 and "------" not in 
-                                hairpin5):
+                        # Get the index of the chromosome to add the
+                        # inverted repeat to
+                        index = self.chrDict[chrName]
 
-                            # Get the index of the chromosome to add the
-                            # inverted repeat to
-                            index = self.chrDict[chrName]
+                        # Add the inverted repeat to the appropriate
+                        # list within IRDictByChr
+                        IRName = "precursor-%s" % IRCounter
+                        self.IRDictByChr[index][IRName] = (start5, end5,
+                            start3, end3, loop, 'w', hairpin5,
+                            alignmentIndicators, hairpin3)
 
-                            # Add the inverted repeat to the appropriate
-                            # list within IRDictByChr
-                            IRName = "precursor-%s" % IRCounter
-                            self.IRDictByChr[index][IRName] = (start5, end5,
-                                start3, end3, loop, 'w', hairpin5,
-                                alignmentIndicators, hairpin3)
+                        IRCounter += 1
+                        IRName = "precursor-%s" % IRCounter
+                        self.IRDictByChr[index][IRName] = (start5, end5,
+                            start3, end3, loop, 'c', hairpin5,
+                            alignmentIndicators, hairpin3)
 
-                            IRCounter += 1
-                            IRName = "precursor-%s" % IRCounter
-                            self.IRDictByChr[index][IRName] = (start5, end5,
-                                start3, end3, loop, 'c', hairpin5,
-                                alignmentIndicators, hairpin3)
-
-                            if(runEInvertedFlag):
-                                for entry in toWriteList:
-                                    align_out.write(entry)
-                            toWriteList = []
-                            IRCounter += 1
+                        if(runEInvertedFlag):
+                            for entry in toWriteList:
+                                align_out.write(entry)
+                        toWriteList = []
+                        IRCounter += 1
 
                     # Increment the counter
                     counter += 1 
@@ -303,7 +291,6 @@ class Genome:
                     os.remove(toDelete)
 
         return(IRCounter)
-
 
 def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
         threshold, maxRepLen):

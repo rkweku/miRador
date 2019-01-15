@@ -353,7 +353,7 @@ def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
         print("Something went wrong when running einverted. Command was\n"\
             "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
             "%s -maxrepeat %s -outfil %s -outseq %s" % (einvertedPath,
-            tempInput, gap, threshold, match, mismatch, maxRepLen,
+            chrFilename, gap, threshold, match, mismatch, maxRepLen,
             outputAlignmentFilename, outputFastaFilename))
         sys.exit()
 

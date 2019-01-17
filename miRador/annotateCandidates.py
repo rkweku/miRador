@@ -579,6 +579,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                             line.append(toWrite)
 
+                        # Re-initialize libCount to 0 as we are looping through
+                        # miRNA families and we don't want to conserve the
+                        # count on the next family
+                        libCount = 0
+
         # If the candidate miRNA had no similar sequence, it is completely
         # novel by our tests and thus requires validation in more than one
         # library. Thus, here we will literate through the results and

@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import time
 
 import setupMiRBase
 
@@ -51,6 +52,16 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             print("%s could not be found! Please check that the file path "\
                 "was input correctly" % libName)
             sys.exit()
+    if(len(libFilenamesList) == 1):
+        print("\n***WARNING***\nOnly one library was provided. While miRador "\
+            "can run with this, miRador will not\noutput any miRNAs that are "\
+            "predicted outside of any known families as we require\n"\
+            "identification in multiple libraries for novel annotation.\nIf "\
+            "this organism does not exist yet in miRBase, then no miRNAs "\
+            "will be predicted.")
+        print("Pausing execution for 20 seconds if you want to stop this run "\
+            "and add libraries. (Use ctrl+c to stop)\n")
+        time.sleep(20)
 
     if(not shutil.which(bowtiePath)):
         print("bowtie could not be found at the provided path: %s\nCorrect "\

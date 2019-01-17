@@ -50,14 +50,54 @@ def miRador():
     # Get the genome file name
     genomeFilename = config.get("Genome", "genomeFilename")
 
-    # Get the EInverted arguments
-    runEInvertedFlag = int(config.get("EInverted", "runEInvertedFlag",
-        fallback = 1))
-    match = int(config.get("EInverted", "match", fallback = 3))
-    mismatch = int(config.get("EInverted", "mismatch", fallback = 4))
-    gap = int(config.get("EInverted", "gap", fallback = 6))
-    threshold = int(config.get("EInverted", "threshold", fallback = 40))
-    maxRepLen = int(config.get("EInverted", "maxRepLen", fallback = 300))
+    # Get the einverted arguments
+    runEInvertedFlag = config.getint("EInverted", "runEInvertedFlag",
+        fallback = 1)
+    einvertedPresets = (config.get("Einverted", "EinvertedPresets",
+        fallback = "medium"))
+
+    # If einvertedPresets is set, set the einverted parameters to
+    # appropriate levels for prediction of inverted repeats
+    if(einvertedPresets.lower() == "medium"):
+        match = 3
+        mismatch = -4
+        gap = 6
+        threshold = 45
+        maxRepLen = 300
+
+    elif(einvertedPresets.lower() == "low"):
+        match = 3
+        mismatch = -4
+        gap = 5
+        threshold = 40
+        maxRepLen = 300
+
+    elif(einvertedPresets.lower() == "high"):
+        match = 3
+        mismatch == -5
+        gap = 7
+        threshold = 50
+        maxRepLen = 300
+
+    # Get the advanced einverted arguments from the config file which
+    # will override the presets if these are set
+    advancedMatch = config.get("Advanced", "match")
+    advancedMismatch = config.get("Advanced", "mismatch")
+    advancedGap = config.get("Advanced", "gap")
+    advancedThreshold = config.get("Advanced", "threshold")
+    advancedMaxRepLen = config.get("Advanced", "maxRepLen", fallback = 300)
+
+    # If the advanced settings are set, override whatever has been set in them
+    if(advancedMatch):
+        match = int(advancedMatch)
+    if(advancedMismatch):
+        mismatch = int(advancedMismatch)
+    if(advancedGap):
+        gap = int(advancedGap)
+    if(advancedThreshold):
+        threshold = int(advancedThreshold)
+    if(advancedMaxRepLen):
+        maxRepLen = int(advancedMaxRepLen)
 
     # Get the Libraries arguments and parse the libraries into a list
     # of strings. User can input a list of files or just a directory
@@ -84,7 +124,7 @@ def miRador():
     organism = config.get("miRBase", "organism")
     version = config.get("miRBase", "version", fallback = "CURRENT")
 
-    parallel = int(config.get("General", "parallel"))
+    parallel = config.getint("General", "parallel")
     nthreads = config.get("General", "nthreads")
     bowtiePath = os.path.expanduser(config.get("General", "bowtiePath"))
     bowtieBuildPath = os.path.expanduser(config.get("General",
@@ -191,11 +231,15 @@ def miRador():
     for chrName, chrIndex in GenomeClass.chrDict.items():
         candidatesByLibDict[chrName] = {}
 
+    # Initialize libCounter to help inform users how far along the run is
+    libCounter = 1
+
     for libraryFilename in libFilenamesList:
         libNameNoFolders = os.path.splitext(os.path.basename(
             libraryFilename))[0]
 
-        print("Beginning to process %s." % libraryFilename)
+        print("Beginning to process %s, library %s of %s." % (
+            libraryFilename, libCounter, len(libFilenamesList)))
         Lib = library.Library(libraryFilename, GenomeClass.chrDict)
 
         filteredPrecursorsDict[libNameNoFolders] = {}
@@ -367,6 +411,9 @@ def miRador():
         filterPrecursors.writeFilteredPrecursors(filteredFilename,
             GenomeClass.chrDict, GenomeClass.IRDictByChr,
             filteredPrecursorsDict[libNameNoFolders])
+
+        # Increment the library counter
+        libCounter += 1
 
     filterPrecursors.writeCandidates(outputFolder, candidatesByLibDict,
         filteredPrecursorsDict, GenomeClass.IRDictByChr, libFilenamesList,

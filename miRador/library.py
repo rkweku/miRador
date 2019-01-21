@@ -3,6 +3,43 @@ import subprocess
 import time
 import sys
 
+#def mergeLibSeqs(LibList):
+#    """
+#    Create a list of unique tags for the purpose of mapping unique
+#    sequences to the genome
+#
+#    Args:
+#        libDictList: A list of dictionaries of each library
+#
+#    Returns:
+#        List of unique sequences
+#
+#    """
+#
+#    # Create an empty list for the unique sequences
+#    allSeqs = []
+#
+#    # Loop through each Library object and add all sequences to uniqueSeqs
+#    for LibClass in LibList:
+#        allSeqs.extend(list(LibClass.libDict.keys()))
+#
+#    # Create a set of the allSeqs to get a list of unique sequences so
+#    # that they may be mapped with bowtie
+#    uniqueSeqs = list(set(allSeqs))
+#
+#    # Open a file to write the unique sequences to and create a counter
+#    # to name the sequences
+#    f = open("libs/uniqueSeqs.fa", "w")
+#    counter = 0
+#
+#    # Write the unique sequences to a file so that they can be mapped
+#    # to the inverted repeats together
+#    for sequence in uniqueSeqs:
+#        f.write(">s_%s\n%s\n" % (counter, sequence))
+#        counter += 1
+#
+#    return(uniqueSeqs)
+
 class Library:
     """
     Class grouping of library functions and data structures

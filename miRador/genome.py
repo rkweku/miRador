@@ -79,7 +79,7 @@ class Genome:
             chrDict[chrName] = counter - 1
 
             # Remove any trailing characters from the sequence
-            sequence = chromoInfo[2].rstrip()
+            sequence = chromoInfo[2].rstrip().replace("\n","")
 
             # Create a file for the chromosome and write it to a file
             splitFilename = "genome/%s_%s.fa" % (os.path.splitext(

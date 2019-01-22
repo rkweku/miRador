@@ -19,6 +19,9 @@ There are several dependencies of miRador, all of which are checked prior to run
 ### Python3 packages
 `biopython`: https://biopython.org/wiki/Download
 
+Upon python installation, external packages may be installed via pip. If your system does not have pip installed already, or you do not have pip for your version of python, you can follow the installation instructions here: https://pip.pypa.io/en/stable/installing/. If you do not have sudo privileges on your system, the --user option can be used when installing packages with pip. This will add the package to your local directory python directory and allow you to install any package without the need of sudo. To do this, open your terminal and simply type: `pip3 install --user PackageName`
+
+
 ## Configuration
 Running miRador requires modifyinga configuration file, initially named `miRador.ini`
 

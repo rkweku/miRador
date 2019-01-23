@@ -450,7 +450,7 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
                         os.rename("%s/images/%s_precursor.pdf" % (
                             outputFolder, mirName), 
                             "%s/images/%s_precursor.pdf" % (
-                            outputFolder, similarityDict[mirName][0]))
+                            outputFolder, identicalMirna))
 
     # If we did not find an annotated miRNA at this same position, we will
     # annotate it in the final file as being identical to the following known

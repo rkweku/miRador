@@ -21,7 +21,7 @@ my $cwd = getcwd;
 ($cwd) =($cwd=~/^(.+)$/);
 # rgb colors for highlighting short seqs
 my @rgb_colors = ('255 40 40', 
-                  '255 0 255', 
+                  '0 191 255', 
                   '0 0 255', 
                   '0 255 255', 
                   '0 255 0', 
@@ -103,7 +103,7 @@ my @rgb_colors = ('255 40 40',
   
   # add label to postscript file
   # open the RNAplot outputfile in its temp dir and another file for writing the modified ps
-  my $label ="Secondary structure for_" .$_[2] ;
+  my $label ="Secondary structure for " .$_[2] ;
 
   open PS , '<', $RNAplot_dir .'/'. $RNAplot_out_file;
   open PS_FINAL, '>' , $RNAplot_dir . '/' . $RNAplot_ps_final;
@@ -131,7 +131,7 @@ my @rgb_colors = ('255 40 40',
   # convert to PDF and write to results file
   my $pdf_file = $_[2].'_Structure_plot.pdf';
 
-  $cmd = $ps2pdf_cmd . ' '. $RNAplot_dir . '/' . $RNAplot_out_file . ' ' . $pdf_file ;
+  $cmd = $ps2pdf_cmd . ' '. $RNAplot_dir . '/' . $RNAplot_ps_final . ' ' . $pdf_file ;
   chmod 0666, $pdf_file ; 
   my $output = `$cmd` ;
   if ($output) {

@@ -738,8 +738,6 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
     mir_out.write('%s\n%s' % (mirSeq, starSeq))
     mir_out.close()
 
-    #print("perl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName, precursorSeq, tempFilename))
-
     returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
         mirName, precursorSeq, tempFilename])
 
@@ -749,6 +747,8 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
             precursorSeq, tempFilename))
         sys.exit()
 
+    # Rename the file from the default drawPrecursor Structure_plot file
+    # name to the mirName_precursor
     os.rename("%s_RNAplot_out/%s_Structure_plot.pdf" % (mirName,
         mirName), "%s/images/%s_precursor.pdf" % (outputFolder, mirName))
 

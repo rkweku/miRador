@@ -53,7 +53,7 @@ def miRador():
     # Get the einverted arguments
     runEInvertedFlag = config.getint("EInverted", "runEInvertedFlag",
         fallback = 1)
-    einvertedPresets = (config.get("Einverted", "EinvertedPresets",
+    einvertedPresets = (config.get("EInverted", "einvertedPresets",
         fallback = "medium"))
 
     # If einvertedPresets is set, set the einverted parameters to
@@ -68,7 +68,7 @@ def miRador():
     elif(einvertedPresets.lower() == "low"):
         match = 3
         mismatch = -4
-        gap = 5
+        gap = 6
         threshold = 40
         maxRepLen = 300
 
@@ -85,7 +85,7 @@ def miRador():
     advancedMismatch = config.get("Advanced", "mismatch")
     advancedGap = config.get("Advanced", "gap")
     advancedThreshold = config.get("Advanced", "threshold")
-    advancedMaxRepLen = config.get("Advanced", "maxRepLen", fallback = 300)
+    advancedMaxRepLen = config.get("Advanced", "maxRepLen")
 
     # If the advanced settings are set, override whatever has been set in them
     if(advancedMatch):

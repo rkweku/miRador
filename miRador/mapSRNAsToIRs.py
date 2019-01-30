@@ -293,7 +293,11 @@ def writeUnfilteredPrecursors(filename, chrDict, IRDictByChr,
                     if(i == 0):
                         f.write('%s,' % chrName)
                     if(i == 5 or i == 6 or i == 7 or i == 8):
-                        f.write('%s\n' % coordinates[i])
+                        # We want to use U instead of T, but since the strand
+                        # and alignment indicators (which are also written
+                        # with this line) can't contain T, this should be
+                        # safe here
+                        f.write('%s\n' % coordinates[i].replace("T", "U"))
                     else:
                         f.write('%s,' % coordinates[i])
 
@@ -304,7 +308,7 @@ def writeUnfilteredPrecursors(filename, chrDict, IRDictByChr,
                     # postiion, loop through the list of entries to
                     # write them all to the file
                     for entry in arm5[position]:
-                        tag = entry[0]
+                        tag = entry[0].replace("T", "U")
                         abundance = entry[1]
                         f.write('%s,%s,%s\n' % (tag, position, abundance))
 
@@ -315,6 +319,6 @@ def writeUnfilteredPrecursors(filename, chrDict, IRDictByChr,
                     # postiion, loop through the list of entries to
                     # write them all to the file
                     for entry in arm3[position]:
-                        tag = entry[0]
+                        tag = entry[0].replace("T", "U")
                         abundance = entry[1]
                         f.write('%s,%s,%s\n' % (tag, position, abundance))

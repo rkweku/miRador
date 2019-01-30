@@ -152,8 +152,8 @@ def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename):
 
         # Using the query and subject IDs, get the query and subject
         # sequences from the respective dictionaries
-        querySeq = querySequences[queryID].replace('U','T')
-        subjectSeq = subjectSequences[subjectID].replace('U','T')
+        querySeq = querySequences[queryID].replace("T", "U")
+        subjectSeq = subjectSequences[subjectID].replace("T", "U")
 
         # Loop through the row to write the new row to the output file
         for entry in row:

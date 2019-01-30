@@ -40,7 +40,11 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                 f.write('%s,%s,' % (precursorName, chrName))
                 for i in range(len(coordinates)):
                     if(i == 5 or i == 6 or i == 7 or i == 8):
-                        f.write('%s\n' % coordinates[i])
+                        # We want to use U instead of T, but since the strand
+                        # and alignment indicators (which are also written
+                        # with this line) can't contain T, this should be
+                        # safe here
+                        f.write('%s\n' % coordinates[i].replace("T", "U"))
                     else:
                         f.write('%s,' % coordinates[i]) 
 
@@ -75,15 +79,17 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                             'precursor-')[1], duplexCount)
                         duplexCount += 1
                     else:
-                        mirName = "candidate-%s" % precursorName.split('precursor-')[1]
+                        mirName = "candidate-%s" % precursorName.split(
+                            'precursor-')[1]
 
                     f.write("%s-%s\tSequence: %s\tPosition:%s\t"\
-                        "Abundance:%s\n" % (mirName, arm, mirSeq, mirPos,
+                        "Abundance:%s\n" % (mirName, arm,
+                        mirSeq.replace("T", "U"), mirPos,
                         mirAbun))
 
                     f.write("%s*\tSequence: %s\tPosition:%s\t"\
-                        "Abundance:%s\n" % (mirName, starSeq, starPos,
-                        starAbun))
+                        "Abundance:%s\n" % (mirName, starSeq.replace("T", "U"),
+                        starPos, starAbun))
 
                     f.write("Match:%s, Mismatch:%s, Wobble:%s, Gap:%s, "\
                         "1-nt Variant Abundance:%s, Total sRNA Precursor "\
@@ -735,7 +741,8 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
 
     tempFilename = "%s/images/%s.temp" % (outputFolder, mirName)
     mir_out = open(tempFilename, "w")
-    mir_out.write('%s\n%s' % (mirSeq, starSeq))
+    mir_out.write('%s\n%s' % (mirSeq.replace("T", "U"),
+        starSeq.replace("T", "U")))
     mir_out.close()
 
     returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
@@ -858,11 +865,12 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # Write the candidate name and the sequence to the
                     # fasta file
                     g.write('>%s\n' % mirName)
-                    g.write("%s\n" % mirSeq)
+                    g.write("%s\n" % mirSeq.replace("T", "U"))
 
                     f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,
-                        chrName, strand, mirPos, mirSeq, len(mirSeq),
-                        starPos, starSeq, len(starSeq)))
+                        chrName, strand, mirPos, mirSeq.replace("T", "U"),
+                        len(mirSeq), starPos, starSeq.replace("T", "U"), 
+                        len(starSeq)))
 
                     for libName in libFilenamesList:
                         libNameNoFolders =  os.path.splitext(
@@ -907,12 +915,12 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                         sequence = wholeFile.partition('\n')[2]
                         sequence = sequence.rstrip()
 
-                    precursorSeq = sequence[start5 - 1:end3]
+                    precursorSeq = sequence[start5 - 1:end3].replace("T", "U")
                     # If the strand is c, we need to reverse complement it
                     # in order to find the actual miRNA and * sequence on it
                     if(strand == 'c'):
                         precursorSeq = precursorSeq.translate(str.maketrans(
-                            "ACGT","TGCA"))[::-1]
+                            "ACGU","UGCA"))[::-1]
 
                     # Draw this candidate miRNA and its miRNA* on the
                     # precursor using RNAFold

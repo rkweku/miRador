@@ -538,6 +538,14 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     similarityDict, mirBaseDict, identicalList,
                     line, outputFolder)
 
+                # Write the line to a file once the candidate miRNA has
+                # been renamed
+                for i in range(len(line)):
+                    if i == len(line) - 1:
+                        f.write("%s\n" % line[i])
+                    else:
+                        f.write("%s," % line[i])
+
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
             # write this information to the output file.
@@ -545,6 +553,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 # Loop through each miRNA family that the candidate sequence
                 # had fewer than 5 differences to
                 for mirFamily, organismList in similarityDict[mirName].items():
+                    # Initialize libCount to 0 as we are looping through
+                    # miRNA families and we don't want to conserve the
+                    # count on the next family
+                    libCount = 0
+
                     # If the organism being studied has a very similar
                     # sequence to one that is already known for this organism
                     # in miRBase, we will tag it as a member of this family
@@ -563,13 +576,14 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                             if(float(line[i])):
                                 libCount += 1
                         if(libCount > 1 and libCount > float(numLibs * .1)):
+                            similarFlag = True
                             line.append("Conserved family of the following:")
                             line.append(mirFamily)
 
+                            toWrite = ""
                             # Add the list of organismList with this same
                             # miRNA family that met the similarity
                             # requirement
-                            toWrite = ""
                             for similarOrganism in sorted(organismList):
                                 if(similarOrganism == sorted(
                                         organismList[-1])):
@@ -579,30 +593,35 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                             line.append(toWrite)
 
-                        # Re-initialize libCount to 0 as we are looping through
-                        # miRNA families and we don't want to conserve the
-                        # count on the next family
-                        libCount = 0
+                # If the number of libraries this miRNA was predicted in is
+                # greater than 1 as well as greater than 10% of the given
+                # libraries, then we will confirm the replication requirement
+                if(similarFlag):
+                    for i in range(len(line)):
+                        if i == len(line) - 1:
+                            f.write("%s\n" % line[i])
+                        else:
+                            f.write("%s," % line[i]) 
 
         # If the candidate miRNA had no similar sequence, it is completely
         # novel by our tests and thus requires validation in more than one
         # library. Thus, here we will literate through the results and
         # remove candidate miRNAs that were identified in just one library
         else:
+            # Identify how many libraries this miRNA has been predicted
+            # in
             for i in range(startIterIndex, len(line), 6):
                 if(float(line[i])):
                     libCount += 1
 
+            # If the number of libraries this miRNA was predicted in is
+            # greater than 1 as well as greater than 10% of the given
+            # libraries, then we will confirm the replication requirement
             if(libCount > 1 and libCount > float(numLibs * .1)):
                 line.append("Novel")
 
-        # If identicalFlag is set, the prepared line will be written to the
-        # file. If identicalFlag is not set, then we will only write the line
-        # if it is present in more than 1 library, and at least 10% of the 
-        # analyzed libraries
-        if(identicalFlag or (libCount > 1 and libCount > float(numLibs * .1))):
-            for i in range(len(line)):
-                if i == len(line) - 1:
-                    f.write("%s\n" % line[i])
-                else:
-                    f.write("%s," % line[i])
+                for i in range(len(line)):
+                    if i == len(line) - 1:
+                        f.write("%s\n" % line[i])
+                    else:
+                        f.write("%s," % line[i])

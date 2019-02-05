@@ -471,6 +471,11 @@ def miRador():
     annotateCandidates.annotateCandidates(outputFolder, similarityDict,
         organism, mirBaseDict, numLibs)
 
+    # Delete the single chromosome files used by einverted and the
+    # draw functions to clean up temp file
+    for chrFilename in GenomeClass.chrFilenamesList:
+        os.remove(chrFilename)
+
     funcEnd = time.time()
     execTime = round(funcEnd - funcStart, 2)
     print("Time to annotate candidate miRNAs: %s seconds" % (execTime))

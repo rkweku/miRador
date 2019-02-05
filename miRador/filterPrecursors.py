@@ -801,7 +801,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
             "Star Position,Star Sequence,Star Length,")
 
         for libName in libFilenamesList:
-            libNameNoFolders =  os.path.splitext(libName.split('/')[-1])[0]
+            libNameNoFolders = os.path.splitext(libName.split('/')[-1])[0]
             f.write("miR Abun in {0},Star Abun in {0},1-nt Variants miR Abun "\
                 "in {0},1-nt Variants Star Abun in {0},Total Precursor Abun "\
                 "in {0},Proportion of reads from miR:miR* in {0}".format(
@@ -827,7 +827,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                 start5 = coordinates[0]
                 end3 = coordinates[3]
                 strand = coordinates[5]
-
+                multiDuplex = False
                 mirCount = 1
 
                 # Loop through every duplex in the candidate dictionary
@@ -849,7 +849,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # If there is one miRNA candidate in the duplex,
                     # we don't need to create a unique ID other than
                     # the name of the precursor
-                    if(True):#len(filteredPrecursorsDict[) == 1):
+                    if(len(candidatesDict) == 1):
                         mirName = 'candidate-%s-%s' % (precursorName.split(
                             'precursor-')[1], arm)
 
@@ -873,7 +873,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                         len(starSeq)))
 
                     for libName in libFilenamesList:
-                        libNameNoFolders =  os.path.splitext(
+                        libNameNoFolders = os.path.splitext(
                             libName.split('/')[-1])[0]
                         # If the sequence was predicted in the current
                         # library, fill its columns with the relevant

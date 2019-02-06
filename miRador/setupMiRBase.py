@@ -86,20 +86,20 @@ def downloadOrganismsAndMirnas(version):
     # Try to download the mature miRNA file for this organism
     try:
         ftp.retrbinary("RETR mature.fa.gz", open(
-            "miRBase/miRBaseMirnas.fa.gz", "wb").write)
+            "miRBase/mature.fa.gz", "wb").write)
 
     # If there is no file 
     except ftplib.all_errors as e:
         print("Error while downloading mature.fa.gz...\n%s" % e)
         sys.exit()
 
-    # Use gzip to unzip the file and save it as miRBaseMirnas.fa
-    with gzip.open("miRBase/miRBaseMirnas.fa.gz", "rb") as f_gz:
-        with open("miRBase/miRBaseMirnas.fa", "wb") as f_unzip:
+    # Use gzip to unzip the file and save it as mature.fa
+    with gzip.open("miRBase/mature.fa.gz", "rb") as f_gz:
+        with open("miRBase/mature.fa", "wb") as f_unzip:
             shutil.copyfileobj(f_gz, f_unzip)
 
     # Remove organisms.txt.gz as we have already unzipped it
-    os.remove("miRBase/miRBaseMirnas.fa.gz")
+    os.remove("miRBase/mature.fa.gz")
 
     ftp.close()
 
@@ -123,11 +123,10 @@ def findPlantSpeciesFromOrganisms():
     # but skip the heder
     for organism in organismsFile[1:]:
         threeLetterIdentifier = organism[0]
-        name = organism[2]
         tree = organism[3]
 
         if("viridiplantae" in tree.lower()):
-            plantList.append((threeLetterIdentifier, name))
+            plantList.append(threeLetterIdentifier)
 
     return(plantList)
 
@@ -137,8 +136,7 @@ def downloadPlantSpecies(version, plantList):
     Args:
         version: Version of miRBase to be downloaded. Generally should
             be "CURRENT"
-        plantList: A list of tuples of the three letter identifier and
-            organism name of all plant species in miRBase
+        plantList: Three letter identifiers of all plant species in miRBase
 
     """
 
@@ -149,8 +147,7 @@ def downloadPlantSpecies(version, plantList):
 
     # Loop through the organisms to download their gff3 files from miRBase
     for organism in plantList:
-        threeLetterIdentifier = organism[0]
-        name = organism[1]
+        threeLetterIdentifier = organism
 
         # Try to download the gff3 file for this organism.
         try:
@@ -218,6 +215,36 @@ def parsePrecursorGFF(filename):
 
     return(mirBaseDict)
 
+def createFastaFile(plantList):
+    """Loop through mature.fa and add all plant miRNAs to a file called
+    miRBasePlantMirnas.fa
+
+    Args:
+        plantList: A list of tuples containing the three letter identifiers
+            of all plants in miRBase
+
+    """
+
+    f = open("miRBase/mature.fa", "r")
+    wholeFile = f.readlines()
+    f.close()
+
+    g = open("miRBase/miRBasePlantMirnas.fa", "w")
+
+    # Loop through the file in steps of 2
+    for i in range(0,len(wholeFile),2):
+        # Strip the > and newline character from seqID
+        seqID = wholeFile[i][1:].rstrip()
+        # Strip the newline character from the sequence
+        sequence = wholeFile[i+1].rstrip()
+
+        if(seqID.split("-")[0] in plantList):
+            g.write(">%s\n%s" % (seqID, sequence))
+            if(i + 1 != len(wholeFile) - 1):
+                g.write("\n")
+
+    g.close() 
+
 def setupMiRBase(organism, version):
     """Download all plant miRNAs from the provided version of miRBase to
     generate the subject files for BLAST when attentmping to annotate
@@ -248,6 +275,7 @@ def setupMiRBase(organism, version):
         # their GFF files IF they exist
         plantList = findPlantSpeciesFromOrganisms()
         downloadPlantSpecies(version, plantList)
+        createFastaFile(plantList)
 
     # We can only perform identity searches, with positional information, if
     # the GFF file exists. So, first check if the GFF file actually exists,

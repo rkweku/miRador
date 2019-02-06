@@ -429,9 +429,9 @@ def miRador():
 
     funcStart = time.time()
 
-    subjectSequencesFilename = "miRBase/miRBaseMirnas.fa"
+    subjectSequencesFilename = "miRBase/miRBasePlantMirnas.fa"
     queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
-    dbFilename = "miRBase/miRBaseMirnas.db"
+    dbFilename = "miRBase/miRBasePlantMirnas.db"
 
     # Check to see if the BLAST database needs to be updated
     updateFlag = annotateCandidates.checkNeedUpdateByDate(

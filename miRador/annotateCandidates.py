@@ -117,8 +117,8 @@ def blastMirnas(subjectSequencesFilename, dbFilename,
 
     # Run blastn-short, but set word size to 11 as 5 is too short IMO
     NcbiblastnCommandline(query=candidateSequencesFilename,
-        db=dbFilename, task='blastn', word_size='15', outfmt=6,
-        num_threads=8, strand='plus', out=blastFilename)()[0]
+        db=dbFilename, task="blastn-short", outfmt=6, num_threads=8,
+        strand='plus', out=blastFilename)()[0]
 
     return(blastFilename)
 

@@ -97,6 +97,10 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
     # If the user has filled the outputFolder option, check to see if it
     # has results from an older run and then delete them
     if(outputFolder):
+        if(outputFolder == libFolder):
+            print("outputFolder and libFolder cannot be the same folder. "\
+                "Please rename outputFolder and run again")
+            sys.exit()
         if(os.path.isdir("%s/libs" % outputFolder)):
             shutil.rmtree("%s/libs" % outputFolder)
         if(os.path.isdir("%s/images" % outputFolder)):

@@ -565,10 +565,14 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     # If the organism being studied has a very similar
                     # sequence to one that is already known for this organism
                     # in miRBase, we will tag it as a member of this family
+                    # Add the annotation to just after the last library to
+                    # ensure this flag will be before any conserved family
+                    # flag as this is the better of the two
                     if(organism in organismList):
                         similarFlag = True
-                        line.append("New member of existing family")
-                        line.append("%s-%s-like" % (organism, mirFamily))
+                        line.insert(endIndex, "New member of existing family")
+                        line.index(endIndex + 1" %s-%s-like" % (organism,
+                            mirFamily))
 
                     # If the sequence is only similar to miRNAs found in
                     # other organismList, don't tag as a member of any family.

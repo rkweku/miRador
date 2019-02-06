@@ -448,13 +448,13 @@ def miRador():
     localStartTime = time.time()
     print("Performing BLAST")
     blastFilename = annotateCandidates.blastMirnas(subjectSequencesFilename,
-        dbFilename, queryMirnasFilename)
+        dbFilename, queryMirnasFilename, outputFolder)
 
     # Add field for the subject and query sequences in the BLAST output
     # because these sequences are not within by default
     print("Adding sequences to output file")
     annotateCandidates.addSequencesToOutput(queryMirnasFilename,
-        subjectSequencesFilename)
+        subjectSequencesFilename, outputFolder)
 
     # Read the BLAST results into a dictionary for quick querying
     blastDict = annotateCandidates.readBlastResults(blastFilename)

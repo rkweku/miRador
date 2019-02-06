@@ -95,7 +95,7 @@ def createBlastDB(subjectSequencesFilename, dbFilename):
         (subjectSequencesFilename, dbFilename))
 
 def blastMirnas(subjectSequencesFilename, dbFilename,
-        candidateSequencesFilename):
+        candidateSequencesFilename, outputFolder):
     """Create a subject database for the known miRNAs and BLAST
        all candidate miRNAs to those miRNAs to find the evolutionarily
        conserved miRNAS
@@ -106,13 +106,14 @@ def blastMirnas(subjectSequencesFilename, dbFilename,
         dbFilename: The name of the database file that will be written to
         candidateSequencesFilename: The name of the FASTA file holding the
             candidate sequences
-        outputFilename: The name of the output file
+        outputFolder: The path to the output folder for this run
+
     Returns:
         The BLAST results in plain text format
 
     """
 
-    blastFilename = "miRBase/blastResults.txt"
+    blastFilename = "%s/blastResults.txt" % outputFolder
 
     # Run blastn-short, but set word size to 11 as 5 is too short IMO
     NcbiblastnCommandline(query=candidateSequencesFilename,
@@ -121,7 +122,8 @@ def blastMirnas(subjectSequencesFilename, dbFilename,
 
     return(blastFilename)
 
-def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename):
+def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename,
+        outputFolder):
     """Add the full sequences to the XML file for each alignment
 
     Args:
@@ -129,10 +131,11 @@ def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename):
             mirnas
         subjectSequencesFilename: Name of the file holding all subject 
             sequences and IDs
+        outputFolder: The path to the output folder for this run
 
     """
 
-    blastFilename = "miRBase/blastResults.txt"
+    blastFilename = "%s/blastResults.txt" % outputFolder
 
     # Parse query and subject sequences 
     querySequences = getSequencesFromFasta(querySequencesFilename)
@@ -506,6 +509,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
     # but we won't use it for conserved families already found
     # in this species
     startIterIndex = header.index("Star Length") + 6
+    endIterIndex = len(header) - 1
 
     for entry in header:
         if(entry == header[-1]):
@@ -570,7 +574,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     # other organismList, don't tag as a member of any family.
                     # Rather, just write the miRNA family name
                     else:
-                        for i in range(startIterIndex, len(line), 6):
+                        for i in range(startIterIndex, endIterIndex, 6):
                             # If the miRNA has been identified in this
                             # library, increment libCount
                             if(float(line[i])):
@@ -610,7 +614,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
         else:
             # Identify how many libraries this miRNA has been predicted
             # in
-            for i in range(startIterIndex, len(line), 6):
+            for i in range(startIterIndex, endIterIndex, 6):
                 if(float(line[i])):
                     libCount += 1
 

@@ -801,11 +801,11 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
             "Star Position,Star Sequence,Star Length,")
 
         for libName in libFilenamesList:
-            libNameNoFolders = os.path.splitext(libName.split('/')[-1])[0]
+            libNameNoFolders = os.path.splitext(os.path.basename(libName))[0]
             f.write("miR Abun in {0},Star Abun in {0},1-nt Variants miR Abun "\
-                "in {0},1-nt Variants Star Abun in {0},Total Precursor Abun "\
-                "in {0},Proportion of reads from miR:miR* in {0}".format(
-                libNameNoFolders))
+                    "in {0},1-nt Variants Star Abun in {0},Total Precursor "\
+                    "Abun in {0},Proportion of reads from miR:miR* "\
+                    "in {0}".format(libNameNoFolders))
 
             if(libName == libFilenamesList[-1]):
                 f.write("\n")
@@ -873,8 +873,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                         len(starSeq)))
 
                     for libName in libFilenamesList:
-                        libNameNoFolders = os.path.splitext(
-                            libName.split('/')[-1])[0]
+                        libNameNoFolders = os.path.splitext(os.path.basename(
+                            libName))[0]
                         # If the sequence was predicted in the current
                         # library, fill its columns with the relevant
                         # data

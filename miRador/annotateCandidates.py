@@ -570,9 +570,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     # flag as this is the better of the two
                     if(organism in organismList):
                         similarFlag = True
-                        line.insert(endIndex, "New member of existing family")
-                        line.index(endIndex + 1" %s-%s-like" % (organism,
-                            mirFamily))
+                        line.insert(endIterIndex, "New member of existing "\
+                            "family")
+                        line.insert(endIterIndex + 1, " %s-%s-like" %\
+                            (organism, mirFamily))
 
                     # If the sequence is only similar to miRNAs found in
                     # other organismList, don't tag as a member of any family.

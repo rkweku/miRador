@@ -494,12 +494,14 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
     preAnnotationFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
     annotatedFilename = "%s/finalAnnotatedCandidates.csv" % outputFolder
+    fastaFilename = "%s/finalAnnotatedCandidates.fa" % outputFolder
 
     foundKnownDict = {}
 
-    preAnnotatedFile = readFile(preAnnotationFilename, ',')
+    preAnnotatedFile = readFile(preAnnotationFilename, ",")
 
-    f = open(annotatedFilename, 'w')
+    annotatedOut = open(annotatedFilename, "w")
+    fastaOut = open(fastaFilename, "w")
 
     header = preAnnotatedFile[0]
     header.append("Classification Flag")
@@ -513,9 +515,9 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
     for entry in header:
         if(entry == header[-1]):
-            f.write("%s\n" % entry)
+            annotatedOut.write("%s\n" % entry)
         else:
-            f.write("%s," % entry)
+            annotatedOut.write("%s," % entry)
 
     for line in preAnnotatedFile[1:]:
         mirName = line[0]
@@ -546,9 +548,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 # been renamed
                 for i in range(len(line)):
                     if i == len(line) - 1:
-                        f.write("%s\n" % line[i])
+                        annotatedOut.write("%s\n" % line[i])
                     else:
-                        f.write("%s," % line[i])
+                        annotatedOut.write("%s," % line[i])
+
+                # Write the sequence to the FASTA file
+                fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
 
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
@@ -608,9 +613,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 if(similarFlag):
                     for i in range(len(line)):
                         if i == len(line) - 1:
-                            f.write("%s\n" % line[i])
+                            annotatedOut.write("%s\n" % line[i])
                         else:
-                            f.write("%s," % line[i]) 
+                            annotatedOut.write("%s," % line[i]) 
+
+                    # Write the sequence to the FASTA file
+                    fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
 
         # If the candidate miRNA had no similar sequence, it is completely
         # novel by our tests and thus requires validation in more than one
@@ -631,6 +639,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                 for i in range(len(line)):
                     if i == len(line) - 1:
-                        f.write("%s\n" % line[i])
+                        annotatedOut.write("%s\n" % line[i])
                     else:
-                        f.write("%s," % line[i])
+                        annotatedOut.write("%s," % line[i])
+
+                # Write the sequence to the FASTA file
+                fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+
+    annotatedOut.close()
+    fastaOut.close()

@@ -49,6 +49,7 @@ class Library:
     def __init__(self, filename, chrDict):
         self.filename = filename
         self.fastaFilename = "%s.fa" % os.path.splitext(self.filename)[0]
+        self.mappedReads = 0
 
         if(not os.path.isdir("libs")):
             os.mkdir("libs")
@@ -169,23 +170,12 @@ class Library:
 
         return(logFilename)
 
-    def createMappedList(self, chrDict, logFilename):
-        """Create a dictionary to hold the mapped sRNAs for simple querying
+    def normalizeReads(self, logFilename):
+        """Normalize all of the reads in libDict
 
         Args:
-            chrDict: This is the genome chromosome dictionary with the
-                index position for the chromosome so that mappedList
-                and List can be linked by index positions
             logFilename: bowtie log file that will be opened to view the
                 total number of alignments
-
-        Returns:
-            Dictionary of the mapped file with chromosomes as a key and 
-            subdictionary for each chromosome. This subdictionary contains
-            another subdictionary with strand as the key. These
-            subdictionaries have a position as a key and then a list as
-            values. That list contains all tags that map to that same
-            position
 
         """
 
@@ -196,8 +186,36 @@ class Library:
 
         toParseLine = logFile[-1]
 
-        mappedReads = int(re.search("Reported (.*) alignments",
+        self.mappedReads = int(re.search("Reported (.*) alignments",
             toParseLine).group(1))
+
+        for sequence, countsHits in self.libDict.items():
+            counts = countsHits[0]
+            hits = countsHits[1]
+
+            if(hits):
+                # Normalize the counts to RPM
+                normalizedAbun = (counts * 1000000) / self.mappedReads
+                # Replace the counts in libDict with hits normalized abundnace
+                self.libDict[sequence][0] = normalizedAbun / hits
+
+    def createMappedList(self, chrDict):
+        """Create a dictionary to hold the mapped sRNAs for simple querying
+
+        Args:
+            chrDict: This is the genome chromosome dictionary with the
+                index position for the chromosome so that mappedList
+                and List can be linked by index positions
+
+        Returns:
+            Dictionary of the mapped file with chromosomes as a key and 
+            subdictionary for each chromosome. This subdictionary contains
+            another subdictionary with strand as the key. These
+            subdictionaries have a position as a key and then a list as
+            values. That list contains all tags that map to that same
+            position
+
+        """
 
         with open(self.mapFilename, "r") as inFile:
             for line in inFile:
@@ -237,10 +255,6 @@ class Library:
                 else:
                     self.mappedList[chrIndex][strand][position].append(
                         sequence)
-
-                # Normaliz the counts from libDict and re-initalize its value
-                counts = self.libDict[sequence][0]
-                self.libDict[sequence][0] = (counts * 1000000) / (mappedReads)
 
                 # Increment the hits variable for this sequence in libDict
                 # to indicate its number of mapped locations found

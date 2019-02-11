@@ -16,9 +16,6 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
         IREnd: The last position of the inverted repeat
         libDict: The entire library dictionary to be queried for abundances
         IRMappedTags: Dictionary of tags mapping to the inverted repeat.
-            This will be updated with a sequence and hits normalizd abundance
-            if the tag the appropriate length and does not extend beyond the
-            arm of the inverted repeat
 
         Returns:
             The total abundance of tags that map to the IR arm, regardless of
@@ -37,7 +34,6 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
     for sequence in tagList:
         abundance = libDict[sequence][0]
         hits = libDict[sequence][1]
-        hitsNormalizedAbundance = abundance/hits
 
         # We need a quick check to determine if the sequence extends beyond
         # the IR Arm. If it does, we cannot add it as a mapping tag. This
@@ -48,7 +44,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
             continue
 
         # Add the HNA to the total abundance
-        totalAbun += hitsNormalizedAbundance
+        totalAbun += abundance
 
         # If the tag is beween 18 and 26 nt in length, add
         # it its sequence and HNA to IRMappedTags.
@@ -59,7 +55,7 @@ def findOverlappingSeqsAndAbuns(position, subMappedDict, IREnd, libDict,
         # miRNA candidates early in the filtration step
         if(len(sequence) >= 18 and len(sequence) <= 26):
             IRMappedTags[position].append((
-                sequence, hitsNormalizedAbundance))
+                sequence, abundance))
 
     return(totalAbun)
 
@@ -238,9 +234,7 @@ def mapSRNAsToIRs(IRDict, mappedDict, libDict):
                     # If the sequence is in IRMappedSequences, skip it
                     if(sequence not in IRMappedSequences):
                         abundance = libDict[sequence][0]
-                        hits = libDict[sequence][1]
-                        hitsNormalizedAbundance = abundance/hits
-                        loopAbun += hitsNormalizedAbundance
+                        loopAbun += abundance
 
             # Add the mapping information to the precursor dictionary
             precursorsDict[IRName] = (IRMappedTags5, IRMappedTags3,

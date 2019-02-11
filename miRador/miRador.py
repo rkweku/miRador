@@ -276,7 +276,7 @@ def miRador():
 
         # Create a dictionary with the sequence of all tags that
         # map to a position on every chromosome
-        Lib.createMappedList(GenomeClass.chrDict)
+        Lib.createMappedList(GenomeClass.chrDict, logFilename)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)

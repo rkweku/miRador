@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 import sys
@@ -52,35 +53,18 @@ class Library:
         if(not os.path.isdir("libs")):
             os.mkdir("libs")
 
-        self.libDict, self.sumReads = self.readTagCount()
-        self.normalizeCounts()
+        self.libDict = self.readTagCount()
 
         # Create the mapped filename for this library
         self.mapFilename = "%s.map" % os.path.splitext(self.filename)[0]
 
         # Using chrDict from the genome file, create a tuple of multiple
         # dictionaries. Each dictionary in the tuple will represent a 
-        # chromosome. Within these dictionaries are keys 'w' and 'c' for
+        # chromosome. Within these dictionaries are keys "w" and "c" for
         # each strand of the chromosome. These will then contain empty
         # ditionaries as values which will be populated by positions and
         # the sequences of the reads that map there.
-        self.mappedList = [{'w': {}, 'c': {}} for i in range(len(chrDict))]
-
-    def normalizeCounts(self):
-        """Normalize the read counts using RPM and replace the counts in
-        libDict with the normalized RPM
-
-        """
-
-        # Iterate through each tag sequenced in libDict
-        for tag, countHitsList in self.libDict.items():
-            count, hits = countHitsList
-
-            # Determine the RPM of each read and replace the count in
-            # libDict with its normalized RPM
-            rpm = count*1000000/(self.sumReads)
-
-            self.libDict[tag] = [rpm, 0]
+        self.mappedList = [{"w": {}, "c": {}} for i in range(len(chrDict))]
 
     def readTagCount(self):
         """Read a library in tag count format into memory. Because we are
@@ -99,11 +83,10 @@ class Library:
 
         # Create an empty dictionary to store the full library
         libDict = {}
-        sumReads = 0
         readCount = 1
 
         # Open a file to write all FASTA sequences to
-        g = open(self.fastaFilename, 'w')
+        g = open(self.fastaFilename, "w")
 
         # Open the file and loop through line by line to store the library into
         # a dictionary. Each tag will be a key and the abundance will be the
@@ -113,10 +96,9 @@ class Library:
                 # Store the sequence and count into variables, then add them
                 # to the dictionary. There should not be any duplicate
                 # sequences in this format, however, 
-                tag = line.split('\t')[0]
-                count = int(line.split('\t')[1].strip())
+                tag = line.split("\t")[0]
+                count = int(line.split("\t")[1].strip())
                 libDict[tag] = [count, 0]
-                sumReads += count
 
                 g.write(">s_%s\n%s\n" % (readCount, tag))
                 readCount += 1
@@ -132,7 +114,7 @@ class Library:
         print("Time to read library %s: %s seconds" % (self.filename,
             execTime))
 
-        return(libDict, sumReads)
+        return(libDict)
 
     def mapper(self, indexFilename, bowtiePath, nthreads):
         """Map small RNAs to the provided index file
@@ -155,7 +137,7 @@ class Library:
         print("Mapping small RNAs to the genome files for %s" %\
             (self.fastaFilename))
 
-        with open(logFilename, 'w') as logFile:
+        with open(logFilename, "w") as logFile:
             # Run bowtie with the following options:
             # -a to report all valid alignments as we want multihits
             # -m 50 to suppress all alignments with more than 50 matches
@@ -187,13 +169,15 @@ class Library:
 
         return(logFilename)
 
-    def createMappedList(self, chrDict):
+    def createMappedList(self, chrDict, logFilename):
         """Create a dictionary to hold the mapped sRNAs for simple querying
 
         Args:
             chrDict: This is the genome chromosome dictionary with the
                 index position for the chromosome so that mappedList
                 and List can be linked by index positions
+            logFilename: bowtie log file that will be opened to view the
+                total number of alignments
 
         Returns:
             Dictionary of the mapped file with chromosomes as a key and 
@@ -205,27 +189,37 @@ class Library:
 
         """
 
-        with open(self.mapFilename, 'r') as inFile:
+        # Get tne number of genome matched reads from the bowtie log file
+        logIn = open(logFilename, "r")
+        logFile = logIn.readlines()
+        logIn.close()
+
+        toParseLine = logFile[-1]
+
+        mappedReads = int(re.search("Reported (.*) alignments",
+            toParseLine).group(1))
+
+        with open(self.mapFilename, "r") as inFile:
             for line in inFile:
-                flag = line.split('\t')[1]
-                chrName = line.split('\t')[2]
-                position = int(line.split('\t')[3])
-                sequence = line.split('\t')[9]
+                flag = line.split("\t")[1]
+                chrName = line.split("\t")[2]
+                position = int(line.split("\t")[3])
+                sequence = line.split("\t")[9]
 
                 # If the flag is a star, it means that it did not align
                 # and thus must we break from the loop here
-                if(chrName == '*'):
+                if(chrName == "*"):
                     continue
 
                 # If the 16th bit flag is not set, the strand is w
                 elif(not int(flag) & 0b10000):
-                    strand = 'w'
+                    strand = "w"
 
                 # If the 16th bit of the flag is set, the strand is c. We 
                 # thus need to make the sequence the reverse complement to
                 # ensure we can find the right sequence later
                 elif(int(flag) & 0b10000):
-                    strand = 'c'
+                    strand = "c"
                     sequence = sequence.translate(str.maketrans(
                         "ACGT","TGCA"))[::-1]
 
@@ -241,7 +235,12 @@ class Library:
                 # If the position already exists in this dictionary,
                 # just append the sequence to the position list
                 else:
-                    self.mappedList[chrIndex][strand][position].append(sequence)
+                    self.mappedList[chrIndex][strand][position].append(
+                        sequence)
+
+                # Normaliz the counts from libDict and re-initalize its value
+                counts = self.libDict[sequence][0]
+                self.libDict[sequence][0] = (counts * 1000000) / (mappedReads)
 
                 # Increment the hits variable for this sequence in libDict
                 # to indicate its number of mapped locations found

@@ -52,7 +52,8 @@ class Library:
         if(not os.path.isdir("libs")):
             os.mkdir("libs")
 
-        self.libDict = self.readTagCount()
+        self.libDict, self.sumReads = self.readTagCount()
+        self.normalizeCounts()
 
         # Create the mapped filename for this library
         self.mapFilename = "%s.map" % os.path.splitext(self.filename)[0]
@@ -64,6 +65,22 @@ class Library:
         # ditionaries as values which will be populated by positions and
         # the sequences of the reads that map there.
         self.mappedList = [{'w': {}, 'c': {}} for i in range(len(chrDict))]
+
+    def normalizeCounts(self):
+        """Normalize the read counts using RPM and replace the counts in
+        libDict with the normalized RPM
+
+        """
+
+        # Iterate through each tag sequenced in libDict
+        for tag, countHitsList in self.libDict.items():
+            count, hits = countHitsList
+
+            # Determine the RPM of each read and replace the count in
+            # libDict with its normalized RPM
+            rpm = count*1000000/(self.sumReads)
+
+            self.libDict[tag] = [rpm, 0]
 
     def readTagCount(self):
         """Read a library in tag count format into memory. Because we are
@@ -82,7 +99,8 @@ class Library:
 
         # Create an empty dictionary to store the full library
         libDict = {}
-        libSize = 0
+        sumReads = 0
+        readCount = 1
 
         # Open a file to write all FASTA sequences to
         g = open(self.fastaFilename, 'w')
@@ -96,13 +114,14 @@ class Library:
                 # to the dictionary. There should not be any duplicate
                 # sequences in this format, however, 
                 tag = line.split('\t')[0]
-                count = line.split('\t')[1].strip()
-                libDict[tag] = [int(count), 0]
+                count = int(line.split('\t')[1].strip())
+                libDict[tag] = [count, 0]
+                sumReads += count
 
-                g.write(">s_%s\n%s\n" % (libSize, tag))
-                libSize += 1
+                g.write(">s_%s\n%s\n" % (readCount, tag))
+                readCount += 1
 
-            print("Total entries in library %s: %s" % (self.filename, libSize))
+            print("Total entries in library %s: %s" % (self.filename, readCount))
             g.close()
 
         # Stop timer for function
@@ -113,7 +132,7 @@ class Library:
         print("Time to read library %s: %s seconds" % (self.filename,
             execTime))
 
-        return(libDict)
+        return(libDict, sumReads)
 
     def mapper(self, indexFilename, bowtiePath, nthreads):
         """Map small RNAs to the provided index file

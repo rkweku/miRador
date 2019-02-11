@@ -120,6 +120,18 @@ def miRador():
                 libFilenamesList.append("%s/%s" % (libFolder,
                     os.path.join(file)))
 
+    # Do a check to confirm the user did not enter the same library
+    # multiple times in libFilenamesList. First, we don't want to
+    # process a library twice, but we also want to make sure the user
+    # also did not intend to place another library in and accidentally
+    # just pasted the path to another twice
+    numLibs = len(libFilenamesList)
+    if(numLibs != len(set(libFilenamesList))):
+        print("It appears that a library was input more than once. Please "\
+            "check your libraries again, remove any duplicate entries, "\
+            "and ensure all libraries you intend to process are present.")
+        sys.exit()
+
     # Grab the information for the BLAST variables
     organism = config.get("miRBase", "organism")
     version = config.get("miRBase", "version", fallback = "CURRENT")
@@ -464,8 +476,6 @@ def miRador():
     # candidate miRNA is highly similar to
     similarityDict = annotateCandidates.createSimilarityDict(blastDict,
         organism)
-
-    numLibs = len(libFilenamesList)
 
     # Properly annotate the candidate miRNAs with the data in similarityDict
     annotateCandidates.annotateCandidates(outputFolder, similarityDict,

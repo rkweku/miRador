@@ -252,7 +252,7 @@ def setupMiRBase(organism, version):
 
     Args:
         organism: The three letter identifier of the organism being studied
-        version: Version of miRBase to the downloaded. Generally should 
+        version: Version of miRBase to be downloaded. Generally should 
             be "CURRENT"
 
     """

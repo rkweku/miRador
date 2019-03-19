@@ -165,7 +165,7 @@ def miRador():
     # Set the number of cores, if parallel is on
     if(parallel):
         nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
-
+    
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
 
@@ -432,7 +432,7 @@ def miRador():
 
     filterPrecursors.writeCandidates(outputFolder, candidatesByLibDict,
         filteredPrecursorsDict, GenomeClass.IRDictByChr, libFilenamesList,
-        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath)
+        GenomeClass.chrDict)
 
     ##########################################################################
 
@@ -482,7 +482,8 @@ def miRador():
 
     # Properly annotate the candidate miRNAs with the data in similarityDict
     annotateCandidates.annotateCandidates(outputFolder, similarityDict,
-        organism, mirBaseDict, numLibs)
+        organism, mirBaseDict, GenomeClass.IRDictByChr, numLibs,
+        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath)
 
     # Delete the single chromosome files used by einverted and the
     # draw functions to clean up temp file

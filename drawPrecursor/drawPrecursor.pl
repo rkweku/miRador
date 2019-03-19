@@ -41,9 +41,9 @@ my @rgb_colors = ('255 40 40',
                   '153 153 153',
                   '204 204 204') ;
 
-  my $long_seq =  $_[0];#"TGTACTGCCCTTTCTCCATCCCCCAAATCTTTTGGAGTTTTTAACACTATAAATTGAGATACAGATGGAGATTTCTTGAGGCAGGGAGAGGAGGTCAGTGGCGGAGCTTGGAGATATCAGTAGCAGTGGAAGGGGCATGCAGAGGAGATTATATATGTTGATATGCTTCCTATGCTTCCTCTCTCCTCTGCCTGCCCCATCCACTCCTGCTGTTATCCCCTTCACGCGTCATACTGCGGATTAATCCCGTGTCCTCCTATATTTTTTTTCCAG";
+  my $long_seq =  $_[0];
    
-  my $short_seq = $_[1];#"TGGAAGGGGCATGCAGAGGAGA";
+  my $short_seq = $_[1];
   my $file = $short_seq;
   open (FH, "< $file") or die "Can't open $file for read: $!";
   my @lines;
@@ -87,7 +87,6 @@ my @rgb_colors = ('255 40 40',
   
   mkdir $RNAplot_dir;
   move($RNAfold_out_file,$RNAplot_dir);
-  #copy($RNAfold_out_file,$RNAplot_dir);
   chmod 0777, $RNAplot_dir ; 
   chdir $RNAplot_dir ; 
 
@@ -139,8 +138,6 @@ my @rgb_colors = ('255 40 40',
   }
   
   
- #chdir $working_dir;  
-  
   
 
 # get match positions of short sequence on long sequence
@@ -154,7 +151,7 @@ sub get_pos{
   my @pos = () ;
   my $long_seq_len = length($$long_seq_ref) ;
   my $short_seq_len = length($seq) ;
-  for (my $i = 1 ; $i <= $long_seq_len - $short_seq_len + 1; ++$i){#$long_seq_len - $short_seq_len + 1 ; ++$i) {
+  for (my $i = 1 ; $i <= $long_seq_len - $short_seq_len + 1; ++$i){
     my $sub=substr($$long_seq_ref, $i - 1, $short_seq_len);
     if (substr($$long_seq_ref, $i - 1, $short_seq_len) eq $seq) { # we have a match
     my $sub=substr($$long_seq_ref, $i - 1, $short_seq_len);

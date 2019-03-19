@@ -2,8 +2,54 @@ import csv
 import datetime
 import os
 import shutil
+import subprocess
 
 from Bio.Blast.Applications import NcbiblastnCommandline
+from PyPDF2 import PdfFileReader, PdfFileMerger
+
+def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
+        perlPath):
+    """Using RNAFold, draw the miRNA and the miRNA* on the precursor
+    Args:
+        precursorSeq: The sequence of the miRNA precursor
+        mirName: The name of the candidate miRNA. Use this instead of
+            precursorName because it's possible for more than one candidate
+            miRNA to come from the same precursor, so this should be unique
+        mirSeq: The candidate miRNA sequence
+        startSeq: The sequence of the miRNA* on this duplex
+        outputFolder: The name of the output folder
+    """
+
+    tempFilename = "%s/images/%s.temp" % (outputFolder, mirName)
+    mir_out = open(tempFilename, "w")
+    mir_out.write('%s\n%s' % (mirSeq.replace("T", "U"),
+        starSeq.replace("T", "U")))
+    mir_out.close()
+
+    returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
+        mirName, precursorSeq, tempFilename])
+
+    if(returnCode):
+        print("Something went wrong when running drawPrecursor. Command "\
+            "was\nperl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName,
+            precursorSeq, tempFilename))
+        sys.exit()
+
+    # Rename the file from the default drawPrecursor Structure_plot file
+    # name to the mirName_precursor
+    os.rename("%s_RNAplot_out/%s_Structure_plot.pdf" % (mirName,
+        mirName), "%s/images/%s_precursor.pdf" % (outputFolder, mirName))
+
+    # Delete temp files to create image
+    try:
+        os.remove(tempFilename)
+    except OSError as e:
+        print("Error: Failed to delete %s" % tempFilename)
+    try:
+        shutil.rmtree("%s_RNAplot_out" % mirName)
+    except OSError as e:
+        print("Error: Failed to delete RNAplot folder %s_RNAplot_out" %\
+            mirName)
 
 def getFastaDate(filename):
     """Get the date of the input filename creation date
@@ -389,6 +435,8 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
     chrName = line[1]
     strand = line[2]
     position = line[3]
+    mirSeq = line[4]
+    starSeq = line[7]
 
     # Remove "chr" if it exists in the chromosome name
     if("chr" in chrName.lower()):
@@ -468,10 +516,29 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
             toAdd = "%s%s " % (toAdd, identicalMirna)
         line.append(toAdd)
 
-    return(annotatedFlag, line)
+    return(line)
+
+def mergePDF(outputFolder):
+    """Merge the RNAFold PDF files to create one large file of all
+    candidate miRNAs predicted by miRador
+
+    Args:
+        outputFolder: Name of the folder where the results will be written to
+
+    """
+
+    imagesFolder = "%s/images" % outputFolder
+
+    pdf_files = [f for f in os.listdir(imagesFolder) if f.endswith("pdf")]
+    merger = PdfFileMerger()
+    for filename in pdf_files:
+        merger.append(PdfFileReader(os.path.join(imagesFolder,
+            filename), "rb"))
+
+    merger.write("%s/images/mergedPrecursors.pdf" % outputFolder)
 
 def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
-        numLibs):
+        IRDictByChr, numLibs, chrDict, chrFilenamesList, perlPath):
     """Using the similarityDict, annotate the data in the pre-annotated file
     with the proper miRNA name, with the already existing family(ies) that
     the candidate miRNA likely belongs to, or the conservation of an existing
@@ -488,7 +555,13 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
             of the species
         mirBaseDict: Dictionary of miRBase miRNAs and their coordinates for
             this organism, if available (will be an empty dictionary if not)
+        IRDictByChr: List of dictionaries with the inverted repeat information
         numLibs: The total number of libraries in the analysis
+        chrDict: Dictionary of chromosomes and their corresponding
+            positions
+        chrFilenamesList: List of filenames containing the chromosomes of
+            the genome being analyzed
+        perlPath: The path to perl
 
     """
 
@@ -521,10 +594,15 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
     for line in preAnnotatedFile[1:]:
         mirName = line[0]
+        chrName = line[1]
+        strand = line[2]
+        mirSeq = line[4]
+        starSeq = line[7]
+        chrIndex = chrDict[chrName]
         libCount = 0
-        annotatedFlag = False
         identicalFlag = False
         similarFlag = False
+        validatedFlag = False
 
         # Check if the candidate miRNA name is in the similarityDict
         # to determine if it is completely novel or not
@@ -540,9 +618,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                 # Annotate the identical candidate miRNA. The tabs became
                 # too deep for this relatively simple function
-                annotatedFlag, line = annotateIdenticalCandidates(
-                    similarityDict, mirBaseDict, identicalList,
-                    line, outputFolder)
+                line = annotateIdenticalCandidates(similarityDict, 
+                    mirBaseDict, identicalList, line, outputFolder)
 
                 # Write the line to a file once the candidate miRNA has
                 # been renamed
@@ -554,6 +631,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                 # Write the sequence to the FASTA file
                 fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+
+                # Set a flag to identify that this line is confirmed as a
+                # true candidate
+                validatedFlag = True
 
             # If the candidate miRNA is similar to sequences in mirBase, but
             # not identical to anything in this organism, we will need to
@@ -607,9 +688,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                             line.append(toWrite)
 
-                # If the number of libraries this miRNA was predicted in is
-                # greater than 1 as well as greater than 10% of the given
-                # libraries, then we will confirm the replication requirement
+                # If similar flag got set, then we met the replication
+                # requirement was met and this should be added
                 if(similarFlag):
                     for i in range(len(line)):
                         if i == len(line) - 1:
@@ -619,6 +699,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
                     # Write the sequence to the FASTA file
                     fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+
+                    # Set a flag to identify that this line is confirmed
+                    # as a true candidate
+                    validatedFlag = True
 
         # If the candidate miRNA had no similar sequence, it is completely
         # novel by our tests and thus requires validation in more than one
@@ -646,5 +730,39 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 # Write the sequence to the FASTA file
                 fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
 
+                # Set a flag to identify that this line is confirmed as a
+                # true candidate
+                validatedFlag = True
+
+        if(validatedFlag):
+            ### Draw annotated miRNA duplex on its precursor
+            # Get precursor sequence as a subsequence of the entire
+            # chromosome sequence
+            with open(chrFilenamesList[chrIndex], "r") as chromFile:
+                wholeFile = chromFile.read()
+                sequence = wholeFile.partition('\n')[2]
+                sequence = sequence.rstrip()
+
+            # Get the precursor sequence from the inverted repeat dictionary
+            precursorName = "precursor-%s" % mirName.split(
+                "-")[1].split("_")[0]
+            start5 = IRDictByChr[chrIndex][precursorName][0]
+            end3 = IRDictByChr[chrIndex][precursorName][3]
+
+            precursorSeq = sequence[start5 - 1:end3].replace("T", "U")
+            # If the strand is c, we need to reverse complement it
+            # in order to find the actual miRNA and * sequence on it
+            if(strand == 'c'):
+                precursorSeq = precursorSeq.translate(str.maketrans(
+                    "ACGU","UGCA"))[::-1]
+
+        # Draw this candidate miRNA and its miRNA* on the
+        # precursor using RNAFold
+        drawPrecursor(precursorSeq, line[0], mirSeq, starSeq,
+            outputFolder, perlPath)
+
+    # Close the annotated and fasta output files
     annotatedOut.close()
     fastaOut.close()
+
+    mergePDF(outputFolder)

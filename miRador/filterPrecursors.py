@@ -718,54 +718,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
 
     return(finalCandidates)
 
-def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
-        perlPath):
-    """Using RNAFold, draw the miRNA and the miRNA* on the precursor
-
-    Args:
-        precursorSeq: The sequence of the miRNA precursor
-        mirName: The name of the candidate miRNA. Use this instead of
-            precursorName because it's possible for more than one candidate
-            miRNA to come from the same precursor, so this should be unique
-        mirSeq: The candidate miRNA sequence
-        startSeq: The sequence of the miRNA* on this duplex
-        outputFolder: The name of the output folder
-
-    """
-
-    tempFilename = "%s/images/%s.temp" % (outputFolder, mirName)
-    mir_out = open(tempFilename, "w")
-    mir_out.write('%s\n%s' % (mirSeq.replace("T", "U"),
-        starSeq.replace("T", "U")))
-    mir_out.close()
-
-    returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
-        mirName, precursorSeq, tempFilename])
-
-    if(returnCode):
-        print("Something went wrong when running drawPrecursor. Command "\
-            "was\nperl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName,
-            precursorSeq, tempFilename))
-        sys.exit()
-
-    # Rename the file from the default drawPrecursor Structure_plot file
-    # name to the mirName_precursor
-    os.rename("%s_RNAplot_out/%s_Structure_plot.pdf" % (mirName,
-        mirName), "%s/images/%s_precursor.pdf" % (outputFolder, mirName))
-
-    # Delete temp files to create image
-    try:
-        os.remove(tempFilename)
-    except OSError as e:
-        print("Error: Failed to delete %s" % tempFilename)
-    try:
-        shutil.rmtree("%s_RNAplot_out" % mirName)
-    except OSError as e:
-        print("Error: Failed to delete RNAplot folder %s_RNAplot_out" %\
-            mirName)
-
 def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
-        IRDictByChr, libFilenamesList, chrDict, chrFilenamesList, perlPath):
+        IRDictByChr, libFilenamesList, chrDict):
     """Write the candidate miRNAs to the provided filename
 
     Args:
@@ -780,8 +734,6 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
         libFilenamesList: A list of the library filenames used for predictions
         chrDict: Dictionary of chromosome names as the key and their index
             in a list for many variables
-        chrFilenamesList: List of filenames containing the chromosomes of
-            the genome being analyzed
 
     """
 
@@ -900,23 +852,3 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                             f.write("\n")
                         else:
                             f.write(",")
-
-                    ### Draw miRNA duplex on its precursor
-                    # Get precursor sequence as a subsequence of the entire
-                    # chromosome sequence
-                    with open(chrFilenamesList[chrIndex], "r") as chromFile:
-                        wholeFile = chromFile.read()
-                        sequence = wholeFile.partition('\n')[2]
-                        sequence = sequence.rstrip()
-
-                    precursorSeq = sequence[start5 - 1:end3].replace("T", "U")
-                    # If the strand is c, we need to reverse complement it
-                    # in order to find the actual miRNA and * sequence on it
-                    if(strand == 'c'):
-                        precursorSeq = precursorSeq.translate(str.maketrans(
-                            "ACGU","UGCA"))[::-1]
-
-                    # Draw this candidate miRNA and its miRNA* on the
-                    # precursor using RNAFold
-                    drawPrecursor(precursorSeq, mirName, mirSeq, starSeq,
-                        outputFolder, perlPath)

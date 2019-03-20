@@ -750,7 +750,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
     # Open the output files
     with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:
         # Write the column names
-        f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Hits"\
+        f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Hits,"\
             "miR Length,Star Position,Star Sequence,Star Hits,Star Length,")
 
         for libName in libFilenamesList:

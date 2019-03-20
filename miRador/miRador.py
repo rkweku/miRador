@@ -386,7 +386,7 @@ def miRador():
 
             filteredPrecursorsDict[libNameNoFolders][chrName] = \
                 filterPrecursors.filterPrecursors(precursorList, IRDict,
-                overhang)
+                Lib.libDict, overhang)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)

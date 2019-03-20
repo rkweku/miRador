@@ -56,20 +56,22 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                     mirPos = duplex[2]
                     starPos = duplex[3]
                     mirAbun = duplex[4]
-                    starAbun = duplex[5]
-                    matchCount = duplex[6]
-                    mismatchCount = duplex[7]
-                    wobbleCount = duplex[8]
-                    gapCount = duplex[9]
-                    variantMirStrandAbun = duplex[10]
-                    variantStarStrandAbun = duplex[11]
-                    totalAbunMirStrand = duplex[12]
-                    totalAbunStarStrand = duplex[13]
-                    loopAbun = duplex[14]
+                    mirHits = duplex[5]
+                    starAbun = duplex[6]
+                    starHits = duplex[7]
+                    matchCount = duplex[8]
+                    mismatchCount = duplex[9]
+                    wobbleCount = duplex[10]
+                    gapCount = duplex[11]
+                    variantMirStrandAbun = duplex[12]
+                    variantStarStrandAbun = duplex[13]
+                    totalAbunMirStrand = duplex[14]
+                    totalAbunStarStrand = duplex[15]
+                    loopAbun = duplex[16]
                     variantAbun = variantMirStrandAbun + variantStarStrandAbun
                     totalAbun = totalAbunMirStrand + totalAbunStarStrand +\
                         loopAbun
-                    proportion = duplex[15]
+                    proportion = duplex[17]
 
                     # In the event that there is more than one duplex for
                     # this precursor, we need a unique identifier for the
@@ -444,7 +446,7 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
     else:
         return(variantAbundanceList)
 
-def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
+def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
     """This function will perform the sRNA mapping and abundance filters.
     It will first try to find a miRNA and miRNA* pair by identifying
     tags that map to opposite sides of the precursor. It will also create
@@ -454,6 +456,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
         mappedTagsToPrecursors: Dictionary of tag information mapping
             to the precursor, identified by the precursor name
         IRDict: Dictionary of the inverted repeats in one chromosome
+        libDict: The entire library dictionary to be queried for abundances
         overhang: Maximum length of overhang that a duplex can have
     Returns:
         Dictionary of all precursors and the miRNA:miRNA* duplexes within
@@ -601,7 +604,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                 local3Start, local3End)
                             sys.exit()
 
-                        # If there is a 3' overhang on either the sequence,
+                        # If there is a 2-nt overhang on either the sequence,
                         # we have a candidate duplex and will investigate
                         # it further
                         if((local5End - local3End == overhang) and (
@@ -622,6 +625,10 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                             # specifications
                             if(gapCount + mismatchCount + (wobbleCount * .5) 
                                    <= 5 and gapCount <= 3):
+                                # Get the hits information for the 5' and 3'
+                                # tags from libDict
+                                hits5 = libDict[mapped5Tag[0]][1]
+                                hits3 = libDict[mapped3Tag[0]][1]
 
                                 ### Code for the abundance filter
                                 #variant5Abun = totalAbun5
@@ -652,19 +659,18 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                 # Get the proportion of reads coming from
                                 # the miRNA duplex compred to the rest
                                 # of the reads mapping to the duplex
-                                proportion = (variant5Abun +
-                                    variant3Abun) / (totalAbun5
-                                    + totalAbun3 + loopAbun)
+                                proportion = (variant5Abun + variant3Abun) /\
+                                    (totalAbun5 + totalAbun3 + loopAbun)
 
                                 # The 5' mapping tag will be kept as a candidate
                                 # miRNA if it has at least an abundance of 5 RPM
                                 if(tag5Abun >= 5):
                                     duplex = ("5p", mapped3Tag[0],
                                         candidate5Pos, candidate3Pos, tag5Abun,
-                                        tag3Abun, matchCount, mismatchCount,
-                                        wobbleCount, gapCount, variant5Abun,
-                                        variant3Abun, totalAbun5, totalAbun3,
-                                        loopAbun, proportion)
+                                        hits5, tag3Abun, hits3, matchCount, 
+                                        mismatchCount, wobbleCount, gapCount,
+                                        variant5Abun, variant3Abun, totalAbun5,
+                                        totalAbun3, loopAbun, proportion)
 
                                     # If the sum of the two tags in the
                                     # make up more than 75% of the read
@@ -686,15 +692,16 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, overhang):
                                         finalCandidates[precursorName][\
                                             mapped5Tag[0]] = duplex
 
-                                # The 3' mapping tag will be kept as a candidate
-                                # miRNA if it has an abundance of at least 5 RPM
+                                # The 3' mapping tag will be kept as a
+                                # candidate miRNA if it has an abundance
+                                # of at least 5 RPM
                                 if(tag3Abun >= 5):
                                     duplex = ("3p", mapped5Tag[0],
                                         candidate3Pos, candidate5Pos, tag3Abun,
-                                        tag5Abun, matchCount, mismatchCount,
-                                        wobbleCount, gapCount, variant3Abun,
-                                        variant5Abun, totalAbun3, totalAbun5,
-                                        loopAbun, proportion)
+                                        hits3, tag5Abun, hits5, matchCount,
+                                        mismatchCount, wobbleCount, gapCount,
+                                        variant3Abun, variant5Abun, totalAbun3,
+                                        totalAbun5, loopAbun, proportion)
 
                                     # If the sum of the two tags in the
                                     # make up more than 75% of the read
@@ -743,8 +750,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
     # Open the output files
     with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:
         # Write the column names
-        f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Length,"\
-            "Star Position,Star Sequence,Star Length,")
+        f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Hits"\
+            "miR Length,Star Position,Star Sequence,Star Hits,Star Length,")
 
         for libName in libFilenamesList:
             libNameNoFolders = os.path.splitext(os.path.basename(libName))[0]
@@ -791,6 +798,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     starSeq= duplexInfo[1]
                     mirPos = duplexInfo[2]
                     starPos = duplexInfo[3]
+                    mirHits = duplexInfo[5]
+                    starHits = duplexInfo[7]
 
                     # If there is one miRNA candidate in the duplex,
                     # we don't need to create a unique ID other than
@@ -813,10 +822,10 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     g.write('>%s\n' % mirName)
                     g.write("%s\n" % mirSeq.replace("T", "U"))
 
-                    f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,
+                    f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,
                         chrName, strand, mirPos, mirSeq.replace("T", "U"),
-                        len(mirSeq), starPos, starSeq.replace("T", "U"), 
-                        len(starSeq)))
+                        mirHits, len(mirSeq), starPos,
+                        starSeq.replace("T", "U"), starHits, len(starSeq)))
 
                     for libName in libFilenamesList:
                         libNameNoFolders = os.path.splitext(os.path.basename(
@@ -829,15 +838,15 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                                 libNameNoFolders][chrName][precursorName][\
                                 mirSeq]
                             mirAbun = duplexInfo[4]
-                            starAbun = duplexInfo[5]
-                            variantMirAbun = duplexInfo[10]
-                            variantStarAbun = duplexInfo[11]
-                            totalAbun5 = duplexInfo[12]
-                            totalAbun3 = duplexInfo[13]
-                            loopAbun = duplexInfo[14]
+                            starAbun = duplexInfo[6]
+                            variantMirAbun = duplexInfo[12]
+                            variantStarAbun = duplexInfo[13]
+                            totalAbun5 = duplexInfo[14]
+                            totalAbun3 = duplexInfo[15]
+                            loopAbun = duplexInfo[16]
                             variantAbun = variantMirAbun + variantStarAbun
                             totalAbun = totalAbun5 + totalAbun3 + loopAbun
-                            proportion = duplexInfo[15]
+                            proportion = duplexInfo[17]
 
                             f.write("%s,%s,%s,%s,%s,%s" % (mirAbun, starAbun,
                                 variantMirAbun, variantStarAbun, totalAbun,

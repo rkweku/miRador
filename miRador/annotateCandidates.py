@@ -411,7 +411,7 @@ def createSimilarityDict(blastDict, organism):
     return(similarityDict)
 
 def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
-        line, outputFolder):
+        header, line, outputFolder):
     """Helper function to annotate the candidate miRNAs that have identical
     sequences to ones that have already been identified.
 
@@ -420,6 +420,7 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
             this organism, if available (will be an empty dictionary if not)
         identicalList: The list of miRBase miRNAs with the same sequence
             as the candidate miRNA
+        header: Header line of the precursor file
         line: The full line from the pre-annotated file that will be
             modified to provide the new annotation
         outputFolder: Name of the folder where the results will be written to
@@ -430,13 +431,20 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
 
     """
 
+    mirNameIndex = header.index("miR Name")
+    chrNameIndex = header.index("Chr")
+    strandIndex = header.index("Strand")
+    positionIndex = header.index("miR Position")
+    mirSeqIndex = header.index("miR Sequence")
+    starSeqIndex = header.index("Star Sequence")
+
     annotatedFlag = False
-    mirName = line[0]
-    chrName = line[1]
-    strand = line[2]
-    position = line[3]
-    mirSeq = line[4]
-    starSeq = line[7]
+    mirName = line[mirNameIndex]
+    chrName = line[chrNameIndex]
+    strand = line[strandIndex]
+    position = line[positionIndex]
+    mirSeq = line[mirSeqIndex]
+    starSeq = line[starSeqIndex]
 
     # Remove "chr" if it exists in the chromosome name
     if("chr" in chrName.lower()):
@@ -487,7 +495,7 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
                 # represent that
                 if(chrName == mirBaseChr and strand == mirBaseStrand and
                         position == mirBasePosition):
-                    line[0] = identicalMirna
+                    line[mirNameIndex] = identicalMirna
                     line.append("Known")
                     annotatedFlag = True
 
@@ -592,12 +600,19 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
         else:
             annotatedOut.write("%s," % entry)
 
+    # Get the relevant indices of the columns
+    mirNameIndex = header.index("miR Name")
+    chrNameIndex = header.index("Chr")
+    strandIndex = header.index("Strand")
+    mirSeqIndex = header.index("miR Sequence")
+    starSeqIndex = header.index("Star Sequence")
+
     for line in preAnnotatedFile[1:]:
-        mirName = line[0]
-        chrName = line[1]
-        strand = line[2]
-        mirSeq = line[4]
-        starSeq = line[7]
+        mirName = line[mirNameIndex]
+        chrName = line[chrNameIndex]
+        strand = line[strandIndex]
+        mirSeq = line[mirSeqIndex]
+        starSeq = line[starSeqIndex]
         chrIndex = chrDict[chrName]
         libCount = 0
         identicalFlag = False
@@ -619,7 +634,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 # Annotate the identical candidate miRNA. The tabs became
                 # too deep for this relatively simple function
                 line = annotateIdenticalCandidates(similarityDict, 
-                    mirBaseDict, identicalList, line, outputFolder)
+                    mirBaseDict, identicalList, header, line, outputFolder)
 
                 # Write the line to a file once the candidate miRNA has
                 # been renamed
@@ -630,7 +645,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                         annotatedOut.write("%s," % line[i])
 
                 # Write the sequence to the FASTA file
-                fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+                fastaOut.write(">%s\n%s\n" % (line[mirNameIndex],
+                    line[mirSeqIndex]))
 
                 # Set a flag to identify that this line is confirmed as a
                 # true candidate
@@ -698,7 +714,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                             annotatedOut.write("%s," % line[i]) 
 
                     # Write the sequence to the FASTA file
-                    fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+                    fastaOut.write(">%s\n%s\n" % (line[mirNameIndex],
+                        line[mirSeqIndex]))
 
                     # Set a flag to identify that this line is confirmed
                     # as a true candidate
@@ -728,7 +745,8 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                         annotatedOut.write("%s," % line[i])
 
                 # Write the sequence to the FASTA file
-                fastaOut.write(">%s\n%s\n" % (line[0], line[4]))
+                fastaOut.write(">%s\n%s\n" % (line[mirNameIndex],
+                    line[mirSeqIndex]))
 
                 # Set a flag to identify that this line is confirmed as a
                 # true candidate
@@ -756,10 +774,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 precursorSeq = precursorSeq.translate(str.maketrans(
                     "ACGU","UGCA"))[::-1]
 
-        # Draw this candidate miRNA and its miRNA* on the
-        # precursor using RNAFold
-        drawPrecursor(precursorSeq, line[0], mirSeq, starSeq,
-            outputFolder, perlPath)
+            # Draw this candidate miRNA and its miRNA* on the
+            # precursor using RNAFold
+            drawPrecursor(precursorSeq, line[mirNameIndex], mirSeq, starSeq,
+                outputFolder, perlPath)
 
     # Close the annotated and fasta output files
     annotatedOut.close()

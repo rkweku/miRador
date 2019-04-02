@@ -3,6 +3,8 @@ import re
 import subprocess
 import sys
 
+import log
+
 class Genome:
     """
     Class grouping of genome functions and data structures
@@ -128,6 +130,9 @@ class Genome:
 
         """
 
+        # Initialize our logger
+        logger = log.setupLogger("buildBowtieIndex")
+
         # Set the index filename. Remove any file extension and folders
         # from the filename path to ensure the index file is written
         # to the correct folder that is hardcoded here
@@ -135,14 +140,14 @@ class Genome:
         indexFilename = "genome/bowtieIndex/%s" % (filenameStripped)
 
         if(self.checkBowtieNeedsUpdate(indexFilename)):
-            print("Building a bowtie index for %s" % (self.filename))
+            logger.info("Building a bowtie index for %s" % (self.filename))
             with open("genome/bowtieIndex/%s_bowtiebuild.log" %\
                     filenameStripped, 'w') as logFile:
                 returnCode = subprocess.call([bowtieBuildPath, self.filename,
                     indexFilename], stdout = logFile)
 
             if(returnCode):
-                print("Something went wrong when running bowtie-build. "\
+                logger.info("Something went wrong when running bowtie-build. "\
                     "Command was\n%s %s %s" % (bowtieBuildPath, self.filename,
                     indexFilename))
                 sys.exit()
@@ -164,6 +169,9 @@ class Genome:
             IRAlignmentFilenamesList: List of inverted repeat alignment files
             
         """
+
+        # Initialize our logger
+        logger = log.setupLogger("combineIRTempFiles")
 
         # If einverted was run, combine the temp FASTA files
         if(runEInvertedFlag):
@@ -280,7 +288,7 @@ class Genome:
             align_out.close()
 
             # Delete individual inverted files and fasta files
-            print("Combined files '%s and %s'\nDeleting temp files" %\
+            logger.info("Combined files '%s and %s'\nDeleting temp files" %\
                 (self.IRAlignmentFilename, self.IRFastaFilename))
 
             # Combine the inverted repeats FASTA and alignmenet filenames
@@ -312,6 +320,9 @@ def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("runEinverted")
+
     outputFastaFilenamesList = []
     outputAlignmentFilenamesLis = []
 
@@ -338,8 +349,8 @@ def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
     # was a problem and it should be investigated. Temp files wiill
     # remain from the run to assist in the debugging process
     if(returnCode != 0):
-        print("Something went wrong when running einverted. Command was\n"\
-            "%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
+        logger.error("Something went wrong when running einverted. Command "\
+            "was\n%s -sequence %s -gap %s -threshold %s -match %s -mismatch "\
             "%s -maxrepeat %s -outfile %s -outseq %s" % (einvertedPath,
             chrFilename, gap, threshold, match, mismatch, maxRepLen,
             outputAlignmentFilename, outputFastaFilename))

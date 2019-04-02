@@ -1,8 +1,10 @@
+import logging
 import os
 import shutil
 import sys
 import time
 
+import log
 import setupMiRBase
 
 def housekeeping(genomeFilename, libFilenamesString, libFolder,
@@ -32,54 +34,56 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("housekeeping")
+
     # Make sure the genome file exists as defined
     if(not os.path.isfile(genomeFilename)):
-        print("%s could not be found! Please check that the file path "\
-            "was input correctly" % genomeFilename)
+        logger.error("%s could not be found! Please check that the "\
+            "file path was input correctly" % genomeFilename)
         sys.exit()
 
     # Do not allow execution if both libFilenamesString and libFolder
     # are defined to anything other than empty strings
     if(libFilenamesString and libFolder):
-        print("You specified both libFolder and libNamesList, but only one"\
-            "can exist. Delete one and try running again")
+        logger.error("You specified both libFolder and libNamesList, but "\
+            "only one can exist. Delete one and try running again")
         sys.exit()
 
     # Loop through all libraries in libFilenamesList and confirm that they
     # exist before running
     for libName in libFilenamesList:
         if(not os.path.isfile(libName)):
-            print("%s could not be found! Please check that the file path "\
-                "was input correctly" % libName)
+            logger.error("%s could not be found! Please check that the "\
+                "file path was input correctly" % libName)
             sys.exit()
     if(len(libFilenamesList) == 1):
-        print("\n***WARNING***\nOnly one library was provided. While miRador "\
+        logger.warning("Only one library was provided. While miRador "\
             "can run with this, miRador will not\noutput any miRNAs that are "\
             "predicted outside of any known families as we require\n"\
             "identification in multiple libraries for novel annotation.\nIf "\
             "this organism does not exist yet in miRBase, then no miRNAs "\
-            "will be predicted.")
-        print("Pausing execution for 20 seconds if you want to stop this run "\
-            "and add libraries. (Use ctrl+c to stop)\n")
+            "will be predicted.\nPausing execution for 20 seconds if you "\
+            "want to stop this run and add libraries. (Use ctrl+c to stop)\n")
         time.sleep(20)
 
     if(not shutil.which(bowtiePath)):
-        print("bowtie could not be found at the provided path: %s\nCorrect "\
-            "before running again" % bowtiePath)
+        logger.error("bowtie could not be found at the provided path: %s\n"\
+            "Correct before running again" % bowtiePath)
         sys.exit()
 
     if(not shutil.which(bowtieBuildPath)):
-        print("bowtie-build could not be found at the provided path: %s\n"\
-            "Correct before running again" % bowtieBuildPath)
+        logger.error("bowtie-build could not be found at the provided path: "\
+            "%s\nCorrect before running again" % bowtieBuildPath)
         sys.exit()
 
     if(not shutil.which(einvertedPath)):
-        print("einverted could not be found at the provided path: %s\n"\
-            "Correct before running again" % einvertedPath)
+        logger.error("einverted could not be found at the provided path: "\
+            "%s\nCorrect before running again" % einvertedPath)
         sys.exit()
 
     if(not shutil.which(perlPath)):
-        print("perl could not be found at the provided path: %s\n"\
+        logger.error("perl could not be found at the provided path: %s\n"\
             "Correct before running again" % perlPath)
         sys.exit()
 
@@ -97,20 +101,42 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
     # If the user has filled the outputFolder option, check to see if it
     # has results from an older run and then delete them
     if(outputFolder):
+        # Confirm that the output folder's name is not the same as
+        # libFolder. This will ensure nothing of importance is
+        # accidentally deleted 
         if(outputFolder == libFolder):
-            print("outputFolder and libFolder cannot be the same folder. "\
-                "Please rename outputFolder and run again")
+            logger.error("outputFolder and libFolder cannot be the same "\
+                "folder. Please rename outputFolder and run again")
             sys.exit()
+
+        # Delete the libs folder if it exists already
         if(os.path.isdir("%s/libs" % outputFolder)):
             shutil.rmtree("%s/libs" % outputFolder)
+
+        # Delete the images folder if it exists already
         if(os.path.isdir("%s/images" % outputFolder)):
             shutil.rmtree("%s/images" % outputFolder)
-        if(os.path.isfile("%s/finalAnnotatedCandidates.csv" % outputFolder)):
-            os.remove("%s/finalAnnotatedCandidates.csv" % outputFolder)
-        if(os.path.isfile("%s/preAnnotatedCandidates.csv" % outputFolder)):
-            os.remove("%s/preAnnotatedCandidates.csv" % outputFolder)
-        if(os.path.isfile("%s/preAnnotatedCandidates.fa" % outputFolder)):
-            os.remove("%s/preAnnotatedCandidates.fa" % outputFolder)
+
+        # Delete the various output files if they exist already
+        if(os.path.isfile("%s/%s_blastResults.txt" % (outputFolder,
+                outputFolder))):
+            os.remove("%s/%s_blastResults.txt" % (outputFolder, outputFolder))
+        if(os.path.isfile("%s/%s_finalAnnotatedCandidates.csv" % \
+                (outputFolder, outputFolder))):
+            os.remove("%s/%s_finalAnnotatedCandidates.csv" % (outputFolder,
+                outputFolder))
+        if(os.path.isfile("%s/%s_finalAnnotatedCandidates.fa" % \
+                (outputFolder, outputFolder))):
+            os.remove("%s/%s_finalAnnotatedCandidates.fa" % (outputFolder,
+                outputFolder))
+        if(os.path.isfile("%s/%s_preAnnotatedCandidates.csv" % \
+                (outputFolder, outputFolder))):
+            os.remove("%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
+                outputFolder))
+        if(os.path.isfile("%s/%s_preAnnotatedCandidates.fa" % \
+                (outputFolder, outputFolder))):
+            os.remove("%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
+                outputFolder))
 
     ###########################################################################
 

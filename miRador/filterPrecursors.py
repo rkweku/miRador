@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import sys
 
+import log
+
 def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
         precursorsDictByChr):
     """Write the precursors with their duplex to the output file
@@ -464,6 +466,9 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("filterPrecursors")
+
     # Initialize a dictionary to store our final candidaties that pass
     # all filters for this library
     finalCandidates = {}
@@ -544,9 +549,10 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                 # Check to confirm that the sequence with gaps is the
                 # same sequence as before
                 if(oldSequence5 != sequence5.replace('-','')):
-                    print("findSequenceInIR messed up for %s. "\
+                    logger.error("findSequenceInIR messed up for %s. "\
                         "Contact Reza to debug" % oldSequence5)
-                    print(precursorName, oldSequence5, sequence5, local5Start, local5End)
+                    logger.error(precursorName, oldSequence5, sequence5,
+                        local5Start, local5End)
                     sys.exit()
 
                 # Loop through all mapped tags in the 3' dictionary to
@@ -598,10 +604,10 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                         # Check to confirm that the sequence with gaps is
                         # the same sequence as before
                         if(oldSequence3 != sequence3.replace('-','')):
-                            print("findSequenceInIR messed up for %s. "\
+                            logger.error("findSequenceInIR messed up for %s. "\
                                 "Contact Reza to debug" % oldSequence3)
-                            print(precursorName, oldSequence3, sequence3,
-                                local3Start, local3End)
+                            logger.error(precursorName, oldSequence3,
+                                sequence3, local3Start, local3End)
                             sys.exit()
 
                         # If there is a 2-nt overhang on either the sequence,
@@ -663,8 +669,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                     (totalAbun5 + totalAbun3 + loopAbun)
 
                                 # The 5' mapping tag will be kept as a candidate
-                                # miRNA if it has at least an abundance of 5 RPM
-                                if(tag5Abun >= 5):
+                                # miRNA if it has at least an abundance of 3 RPM
+                                if(tag5Abun >= 3):
                                     duplex = ("5p", mapped3Tag[0],
                                         candidate5Pos, candidate3Pos, tag5Abun,
                                         hits5, tag3Abun, hits3, matchCount, 
@@ -694,8 +700,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
                                 # The 3' mapping tag will be kept as a
                                 # candidate miRNA if it has an abundance
-                                # of at least 5 RPM
-                                if(tag3Abun >= 5):
+                                # of at least 3 RPM
+                                if(tag3Abun >= 3):
                                     duplex = ("3p", mapped5Tag[0],
                                         candidate3Pos, candidate5Pos, tag3Abun,
                                         hits3, tag5Abun, hits5, matchCount,
@@ -744,8 +750,10 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
 
     """
 
-    outputFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
-    fastaFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
+    outputFilename = "%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
+        outputFolder)
+    fastaFilename = "%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
+        outputFolder)
 
     # Open the output files
     with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:

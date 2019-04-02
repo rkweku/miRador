@@ -4,6 +4,8 @@ import subprocess
 import time
 import sys
 
+import log
+
 #def mergeLibSeqs(LibList):
 #    """
 #    Create a list of unique tags for the purpose of mapping unique
@@ -79,6 +81,9 @@ class Library:
 
         """
 
+        # Initialize our logger
+        logger = log.setupLogger("readTagCount")
+
         # Start timer for function
         funcStart = time.time()
 
@@ -104,7 +109,8 @@ class Library:
                 g.write(">s_%s\n%s\n" % (readCount, tag))
                 readCount += 1
 
-            print("Total entries in library %s: %s" % (self.filename, readCount))
+            logger.info("Total entries in library %s: %s" % (self.filename,
+                readCount))
             g.close()
 
         # Stop timer for function
@@ -112,7 +118,7 @@ class Library:
 
         # Calculate the execution time and print it to the user
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to read library %s: %s seconds" % (self.filename,
+        logger.info("Time to read library %s: %s seconds" % (self.filename,
             execTime))
 
         return(libDict)
@@ -128,6 +134,9 @@ class Library:
 
         """
 
+        # Initialize our logger
+        logger = log.setupLogger("mapper")
+
         # Strip the filename of its folders and create the output map
         # name with that stripped filename in the libs folder
         indexNameStripped = os.path.basename(indexFilename)
@@ -135,7 +144,7 @@ class Library:
         logFilename = "%s_bowtie.log" % os.path.splitext(self.mapFilename)[:-1]
 
         # Run bowtie
-        print("Mapping small RNAs to the genome files for %s" %\
+        logger.info("Mapping small RNAs to the genome files for %s" %\
             (self.fastaFilename))
 
         with open(logFilename, "w") as logFile:
@@ -160,10 +169,11 @@ class Library:
                 stderr = logFile)
 
             if(returnCode):
-                print("Something went wrong when running bowtie. Command was"\
-                    "\n%s %s -f %s -a -m 50 --best --strata -v 0 -S "\
-                    "%s -P %s --sam-nohead --no-unal" % (bowtiePath, indexFilename,
-                    self.fastaFilename, self.mapFilename, nthreads))
+                logger.error("Something went wrong when running bowtie. "\
+                    "Command was\n%s %s -f %s -a -m 50 --best --strata -v 0 "\
+                    "-S %s -P %s --sam-nohead --no-unal" % (bowtiePath, 
+                    indexFilename, self.fastaFilename, self.mapFilename,
+                    nthreads))
                 sys.exit()
 
         logFile.close()

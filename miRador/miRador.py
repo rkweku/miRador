@@ -13,6 +13,7 @@
 ######## IMPORT ################
 import configparser
 import datetime
+import log
 import os
 import multiprocessing
 import time
@@ -26,6 +27,7 @@ import filterPrecursors
 import genome
 import housekeeping
 import library
+import log
 import mapSRNAsToIRs
 import setupMiRBase
 
@@ -36,6 +38,9 @@ def miRador():
     to those other functions in other files
 
     """
+
+    # Initialize our logger
+    logger = log.setupLogger("miRador")
 
     progStart = time.time()
 
@@ -127,9 +132,10 @@ def miRador():
     # just pasted the path to another twice
     numLibs = len(libFilenamesList)
     if(numLibs != len(set(libFilenamesList))):
-        print("It appears that a library was input more than once. Please "\
-            "check your libraries again, remove any duplicate entries, "\
-            "and ensure all libraries you intend to process are present.")
+        logger.error("It appears that a library was input more than once. "
+            "Please check your libraries again, remove any duplicate "\
+            "entries, and ensure all libraries you intend to process are "
+            "present.")
         sys.exit()
 
     # Grab the information for the BLAST variables
@@ -184,7 +190,7 @@ def miRador():
 
         # If parallel is set, run einverted using the parallel version
         if(parallel):
-            print("Running einverted in parallel")
+            logger.info("Running einverted in parallel")
 
             if(len(GenomeClass.chrFilenamesList) < nproc):
                 pool = multiprocessing.Pool(len(GenomeClass.chrFilenamesList))
@@ -207,7 +213,7 @@ def miRador():
                 IRAlignmentFilenamesList.append(result[1])
 
         else:
-            print("Running einverted sequentially")
+            logger.info("Running einverted sequentially")
 
             # Loop through each chromosome and run einverted on each, one at 
             # a time
@@ -250,7 +256,7 @@ def miRador():
         libNameNoFolders = os.path.splitext(os.path.basename(
             libraryFilename))[0]
 
-        print("Beginning to process %s, library %s of %s." % (
+        logger.info("Beginning to process %s, library %s of %s." % (
             libraryFilename, libCounter, len(libFilenamesList)))
         Lib = library.Library(libraryFilename, GenomeClass.chrDict)
 
@@ -260,7 +266,7 @@ def miRador():
             filteredPrecursorsDict[libNameNoFolders][chrName] = {}
 
         # Map small RNAs to the genome
-        print("Running bowtie on %s" % Lib.filename)
+        logger.info("Running bowtie on %s" % Lib.filename)
         funcStart = time.time()
 
         logFilename = Lib.mapper(GenomeClass.indexFilename, bowtiePath,
@@ -268,10 +274,10 @@ def miRador():
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to run bowtie for %s: %s seconds" % \
+        logger.info("Time to run bowtie for %s: %s seconds" % \
             (Lib.mapFilename, execTime))
 
-        print("Creating the mapped list for %s" % Lib.filename)
+        logger.info("Creating the mapped list for %s" % Lib.filename)
         funcStart = time.time()
 
         # Create a dictionary with the sequence of all tags that
@@ -283,7 +289,7 @@ def miRador():
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to create the mappedList: %s seconds" % (execTime))
+        logger.info("Time to create the mappedList: %s seconds" % (execTime))
     
         #######################################################################
 
@@ -291,7 +297,7 @@ def miRador():
 
         #######################################################################
 
-        print("Mapping sRNAs to the inverted repeats")
+        logger.info("Mapping sRNAs to the inverted repeats")
 
         funcStart = time.time()
 
@@ -326,9 +332,10 @@ def miRador():
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to map sRNAs to inverted repeats: %s seconds" % (execTime))
+        logger.info("Time to map sRNAs to inverted repeats: %s seconds" \
+            % (execTime))
 
-        print("Writing precursors to a file")
+        logger.info("Writing precursors to a file")
 
         # Create a file for all precursors to be written to that have at least
         # one sRNA that maps to both strands
@@ -345,7 +352,7 @@ def miRador():
 
         #######################################################################
 
-        print("Filtering candidate precursors")
+        logger.info("Filtering candidate precursors")
 
         funcStart = time.time()
 
@@ -390,7 +397,8 @@ def miRador():
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        print("Time to filter inverted repeats: %s seconds" % (execTime))
+        logger.info("Time to filter inverted repeats: %s seconds" % \
+            (execTime))
 
         ###
         # Prior to writing this library's results, add its miRNAs and
@@ -440,12 +448,13 @@ def miRador():
 
     ##########################################################################
 
-    print("Annotating candidate miRNAs")
+    logger.info("Annotating candidate miRNAs")
 
     funcStart = time.time()
 
     subjectSequencesFilename = "miRBase/miRBasePlantMirnas.fa"
-    queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
+    queryMirnasFilename = "%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
+        outputFolder)
     dbFilename = "miRBase/miRBasePlantMirnas.db"
 
     # Check to see if the BLAST database needs to be updated
@@ -461,13 +470,13 @@ def miRador():
 
     # BLAST query miRNAs to known miRNAs
     localStartTime = time.time()
-    print("Performing BLAST")
+    logger.info("Performing BLAST")
     blastFilename = annotateCandidates.blastMirnas(subjectSequencesFilename,
         dbFilename, queryMirnasFilename, outputFolder)
 
     # Add field for the subject and query sequences in the BLAST output
     # because these sequences are not within by default
-    print("Adding sequences to output file")
+    logger.info("Adding sequences to output file")
     annotateCandidates.addSequencesToOutput(queryMirnasFilename,
         subjectSequencesFilename, outputFolder)
 
@@ -492,9 +501,9 @@ def miRador():
 
     funcEnd = time.time()
     execTime = round(funcEnd - funcStart, 2)
-    print("Time to annotate candidate miRNAs: %s seconds" % (execTime))
+    logger.info("Time to annotate candidate miRNAs: %s seconds" % (execTime))
 
     progEnd = time.time()
     execTime = round(progEnd - progStart, 2)
 
-    print("Total runtime was %s seconds" % execTime)
+    logger.info("Total runtime was %s seconds" % execTime)

@@ -5,6 +5,7 @@ import shutil
 import sys
 
 import annotateCandidates
+import log
 
 def checkNeedUpdate(version):
     """Check if the version file from miRBase exists in our miRBase folder.
@@ -19,9 +20,17 @@ def checkNeedUpdate(version):
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("checkNeedUpdate")
+
     ftp = ftplib.FTP("mirbase.org")
     ftp.login("anonymous", "")
-    ftp.cwd("pub/mirbase/%s/" % version)
+    try:
+        ftp.cwd("pub/mirbase/%s/" % version)
+    except:
+        logger.error("Input version does not appear to exist in miRBase. " \
+            "Check version number in ini file and try again")
+        sys.exit()
 
     # Pull the list of files from miRBase
     filenamesList = ftp.nlst()
@@ -32,11 +41,11 @@ def checkNeedUpdate(version):
         if(filename.startswith("0_THIS_IS_RELEASE")):
             versionFile = filename
 
-        # If the verson file exists exactly as it was found in miRBase,
-        # return false as we do not need to update our miRBase files
-        if(os.path.exists("miRBase/%s" % filename)):
-            ftp.close()
-            return(False)
+            # If the verson file exists exactly as it was found in miRBase,
+            # return false as we do not need to update our miRBase files
+            if(os.path.exists("miRBase/%s" % filename)):
+                ftp.close()
+                return(False)
 
     ftp.close()
     return(True)
@@ -51,6 +60,9 @@ def downloadOrganismsAndMirnas(version):
             be "CURRENT"
 
     """
+
+    # Initialize our logger
+    logger = log.setupLogger("downloadOrganismsAndMirnas")
 
     ftp = ftplib.FTP("mirbase.org")
     ftp.login("anonymous", "")
@@ -72,7 +84,8 @@ def downloadOrganismsAndMirnas(version):
 
     # If there is no file 
     except ftplib.all_errors as e:
-        print("Error while downloading organisms.txt.gz...\n%s" % e)
+        logger.error("Error while downloading organisms.txt.gz...\n%s\nTry "\
+            "changing the version of miRBase you are trying to download" % e)
         sys.exit()
 
     # Use gzip to unzip the file and save it as organisms.tsv
@@ -90,7 +103,8 @@ def downloadOrganismsAndMirnas(version):
 
     # If there is no file 
     except ftplib.all_errors as e:
-        print("Error while downloading mature.fa.gz...\n%s" % e)
+        logger.error("Error while downloading mature.fa.gz...\n%s\nTry "\
+            "changing the version of miRBase you are trying to download" % e)
         sys.exit()
 
     # Use gzip to unzip the file and save it as mature.fa
@@ -257,12 +271,16 @@ def setupMiRBase(organism, version):
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("setupMirBase")
+
     updateStatus = checkNeedUpdate(version)
     gffFilename = "miRBase/%s.gff3" % organism
     mirBaseDict = {}
 
     # Check if the miRBase files need to be updated
     if(updateStatus):
+        logger.info("Downloading the relevant miRBase files")
         # If there are still files in the miRBase folder but it needs to
         # be updated, then clear the contents prior to populating it again
         if(os.listdir("miRBase")):

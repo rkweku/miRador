@@ -7,6 +7,8 @@ import subprocess
 from Bio.Blast.Applications import NcbiblastnCommandline
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
+import log
+
 def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         perlPath):
     """Using RNAFold, draw the miRNA and the miRNA* on the precursor
@@ -18,7 +20,11 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         mirSeq: The candidate miRNA sequence
         startSeq: The sequence of the miRNA* on this duplex
         outputFolder: The name of the output folder
+        perlPath: The path of perl on this system
+
     """
+    # Initialize our logger
+    logger = log.setupLogger("drawPrecursor")
 
     tempFilename = "%s/images/%s.temp" % (outputFolder, mirName)
     mir_out = open(tempFilename, "w")
@@ -30,9 +36,9 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         mirName, precursorSeq, tempFilename])
 
     if(returnCode):
-        print("Something went wrong when running drawPrecursor. Command "\
-            "was\nperl drawPrecursor/drawPrecursor.pl %s %s %s" % (mirName,
-            precursorSeq, tempFilename))
+        logger.error("Something went wrong when running drawPrecursor." \
+            "Command was\nperl drawPrecursor/drawPrecursor.pl %s %s %s" % \
+            (mirName, precursorSeq, tempFilename))
         sys.exit()
 
     # Rename the file from the default drawPrecursor Structure_plot file
@@ -44,11 +50,11 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
     try:
         os.remove(tempFilename)
     except OSError as e:
-        print("Error: Failed to delete %s" % tempFilename)
+        logger.error("Failed to delete %s" % tempFilename)
     try:
         shutil.rmtree("%s_RNAplot_out" % mirName)
     except OSError as e:
-        print("Error: Failed to delete RNAplot folder %s_RNAplot_out" %\
+        logger.error("Failed to delete RNAplot folder %s_RNAplot_out" %\
             mirName)
 
 def getFastaDate(filename):
@@ -73,11 +79,14 @@ def getLocalDBDate(dbName):
 
     Args:
         dbName: The name of the blast DB
-
+        
     Returns:
         The date of the blast DB update
 
     """
+
+    # Initialize our logger
+    logger = log.setupLogger("getLocalDBDate")
 
     # Only check the creation date if the file even exists
     if(os.path.isfile('%s.nhr' % dbName)):
@@ -90,7 +99,7 @@ def getLocalDBDate(dbName):
     # File doesn't exist so return year 1 for comparison sake.
     # Note: datetime.MINYEAR threw error hence the hardcoded date
     else:
-        print("There is no file with name %s. Creating BLAST database."\
+        logger.info("There is no file with name %s. Creating BLAST database."\
             % dbName)
         return(datetime.datetime(1,1,1))
 
@@ -105,6 +114,9 @@ def checkNeedUpdateByDate(subjectSequencesFilename, dbName):
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("checkNeedUpdateByDate")
+
     # Get the date that the FASTA file was last updated
     fastaFileDate = getFastaDate(subjectSequencesFilename)
 
@@ -114,15 +126,15 @@ def checkNeedUpdateByDate(subjectSequencesFilename, dbName):
     # If the expression database is newer than the BLAST database,
     # an update is needed
     if(fastaFileDate > localDatabaseDate):
-        print("An update is needed to the BLAST database and will be created "\
-        "now. This will take time so please be patient.")
+        logger.info("An update is needed to the BLAST database and will be "\
+        "created now. This will take time so please be patient.")
         return(True)
 
     # If the expression database is older than the BLAST database,
     # no update is needed
     else:
-        print("No update is needed to the BLAST database. Proceeding with "\
-        "the BLAST.")
+        logger.info("No update is needed to the BLAST database. Proceeding "\
+        "with the BLAST.")
         return(False)
 
 
@@ -159,7 +171,7 @@ def blastMirnas(subjectSequencesFilename, dbFilename,
 
     """
 
-    blastFilename = "%s/blastResults.txt" % outputFolder
+    blastFilename = "%s/%s_blastResults.txt" % (outputFolder, outputFolder)
 
     # Run blastn-short, but set word size to 11 as 5 is too short IMO
     NcbiblastnCommandline(query=candidateSequencesFilename,
@@ -181,7 +193,7 @@ def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename,
 
     """
 
-    blastFilename = "%s/blastResults.txt" % outputFolder
+    blastFilename = "%s/%s_blastResults.txt" % (outputFolder, outputFolder)
 
     # Parse query and subject sequences 
     querySequences = getSequencesFromFasta(querySequencesFilename)
@@ -431,6 +443,9 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
 
     """
 
+    # Initialize our logger
+    logger = log.setupLogger("annotateIdenticalCandidates")
+
     mirNameIndex = header.index("miR Name")
     chrNameIndex = header.index("Chr")
     strandIndex = header.index("Strand")
@@ -483,9 +498,9 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
                 # miRBase entry. We will not exit the run, but we will report
                 # the issue to the user and continue to the next tag
                 else:
-                    print("Unrecognized strand of miRBase entry. We will "\
-                        "skip this entry, but please check with the miRBase "\
-                        " file %s.gff3 and miRNA name %s" % (organism,
+                    logger.info("Unrecognized strand of miRBase entry. We "\
+                        "will skip this entry, but please check with the "\
+                        "miRBase file %s.gff3 and miRNA name %s" % (organism,
                         identicalMirna))
                     continue
 
@@ -573,9 +588,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
 
     """
 
-    preAnnotationFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
-    annotatedFilename = "%s/finalAnnotatedCandidates.csv" % outputFolder
-    fastaFilename = "%s/finalAnnotatedCandidates.fa" % outputFolder
+    preAnnotationFilename = "%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
+        outputFolder)
+    annotatedFilename = "%s/%s_finalAnnotatedCandidates.csv" % (outputFolder,
+        outputFolder)
+    fastaFilename = "%s/%s_finalAnnotatedCandidates.fa" % (outputFolder,
+        outputFolder)
 
     foundKnownDict = {}
 

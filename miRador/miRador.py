@@ -156,17 +156,12 @@ def miRador():
     # modifications
     overhang = 2
 
-    # Call setup miRBase to initialize the miRBase folder and required
-    # files as well as populate a dictionary with miRBase miRNAs for the
-    # organism being studied
-    mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
-
     # Perform various housekeeping functions including the checks that all
     # external program dependencies exist, that files being referenced and
-    # folders that willb e written to exist and are created. 
-    housekeeping.housekeeping(genomeFilename, libFilenamesString, libFolder,
-        libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
-        perlPath, outputFolder, version)
+    # folders that will be written to exist and are created. 
+    mirBaseDict = housekeeping.housekeeping(genomeFilename, libFilenamesString,
+        libFolder, libFilenamesList, bowtiePath, bowtieBuildPath,
+        einvertedPath, perlPath, outputFolder, organism, version)
 
     # Set the number of cores, if parallel is on
     if(parallel):

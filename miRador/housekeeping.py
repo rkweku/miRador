@@ -9,10 +9,10 @@ import setupMiRBase
 
 def housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
-        perlPath, outputFolder, version):
+        perlPath, outputFolder, organism, version):
     """Perform various housekeeping functions including the checks that all
     external program dependencies exist, that files being referenced and
-    folders that willb e written to exist and are created. Additionally,
+    folders that will be written to exist and are created. Additionally,
     it will also call setupMirBase.py to create download the current
     version of miRBase if needed to prepare for the annotation of our
     candidate miRNAs
@@ -30,6 +30,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         einvertedPath: The path of einverted on the system
         perlPath: The path of perl on the system
         outputFolder: The config entry for the output folder. Can be blank
+        organism: The three letter identifier of the organism being studied
         version: The version of miRBase to be queried
 
     """
@@ -151,3 +152,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         os.mkdir("%s/libs" % outputFolder)
     if not os.path.isdir("%s/images" % outputFolder):
         os.mkdir("%s/images" % outputFolder)
+
+    mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
+
+    return(mirBaseDict)

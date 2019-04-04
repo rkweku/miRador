@@ -12,10 +12,9 @@ use File::Copy;
 
 sub run{
 # Commands 
-my $RNAfold_cmd = 'RNAfold' ; 
-my $RNAplot_cmd = 'RNAplot' ;
-my $ps2pdf_cmd = 'ps2pdfwr';#'ps2pdf' ; 
-my $ps2eps_cmd = 'ps2eps' ;
+my $RNAfold_cmd = $ARGV[0] ; 
+my $RNAplot_cmd = $ARGV[1] ;
+my $ps2pdf_cmd =  $ARGV[2] ; 
 my $working_dir = getcwd;
 my $cwd = getcwd;
 ($cwd) =($cwd=~/^(.+)$/);
@@ -41,9 +40,9 @@ my @rgb_colors = ('255 40 40',
                   '153 153 153',
                   '204 204 204') ;
 
-  my $long_seq =  $_[0];
-   
-  my $short_seq = $_[1];
+  my $RNAfold_out_file = $ARGV[3].'.RNAfold_out';#.'/data/RNAfold_out';
+  my $long_seq =  $ARGV[4];
+  my $short_seq = $ARGV[5];
   my $file = $short_seq;
   open (FH, "< $file") or die "Can't open $file for read: $!";
   my @lines;
@@ -71,7 +70,6 @@ my @rgb_colors = ('255 40 40',
   }
  
 ### run RNAfold
-  my $RNAfold_out_file = $_[2].'.RNAfold_out';#.'/data/RNAfold_out';
   my $cmd = "echo '$long_seq' | $RNAfold_cmd > $RNAfold_out_file" ; # run RNAfold
   my $out = `$cmd` ;
   
@@ -80,10 +78,10 @@ my @rgb_colors = ('255 40 40',
   # RNAplot always generates its output in a file named after the input sequence
   # or (if not fasta) "rna.ps". Therefore we have to generate another directory
   my $RNAplot_out_file = 'rna.ps' ; # default RNAplot file name
-  my $RNAplot_ps_final = $_[2].'_rna.ps_final' ; # file after addition of label for pdf 
+  my $RNAplot_ps_final = $ARGV[3].'_rna.ps_final' ; # file after addition of label for pdf 
 
   # make temp dir
-  my $RNAplot_dir = $working_dir.'/'.$_[2].'_RNAplot_out';#.'/data/RNAplot_dir';
+  my $RNAplot_dir = $working_dir.'/'.$ARGV[3].'_RNAplot_out';#.'/data/RNAplot_dir';
   
   mkdir $RNAplot_dir;
   move($RNAfold_out_file,$RNAplot_dir);
@@ -102,7 +100,7 @@ my @rgb_colors = ('255 40 40',
   
   # add label to postscript file
   # open the RNAplot outputfile in its temp dir and another file for writing the modified ps
-  my $label ="Secondary structure for " .$_[2] ;
+  my $label ="Secondary structure for " .$ARGV[3] ;
 
   open PS , '<', $RNAplot_dir .'/'. $RNAplot_out_file;
   open PS_FINAL, '>' , $RNAplot_dir . '/' . $RNAplot_ps_final;
@@ -128,7 +126,7 @@ my @rgb_colors = ('255 40 40',
 
 
   # convert to PDF and write to results file
-  my $pdf_file = $_[2].'_Structure_plot.pdf';
+  my $pdf_file = $ARGV[3].'_Structure_plot.pdf';
 
   $cmd = $ps2pdf_cmd . ' '. $RNAplot_dir . '/' . $RNAplot_ps_final . ' ' . $pdf_file ;
   chmod 0666, $pdf_file ; 
@@ -188,9 +186,9 @@ sub get_pos{
 
 #Functional Call
 
-my $long_SEQ=$ARGV[1];
-my $short_SEQ=$ARGV[2];
-my $miR=$ARGV[0];
+my $long_SEQ=$ARGV[4];
+my $short_SEQ=$ARGV[5];
+my $miR=$ARGV[3];
 
 run($long_SEQ,$short_SEQ,$miR);
 

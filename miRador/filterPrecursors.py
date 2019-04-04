@@ -750,10 +750,8 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
 
     """
 
-    outputFilename = "%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
-        outputFolder)
-    fastaFilename = "%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
-        outputFolder)
+    outputFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
+    fastaFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
 
     # Open the output files
     with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:

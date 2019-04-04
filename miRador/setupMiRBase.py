@@ -163,16 +163,18 @@ def downloadPlantSpecies(version, plantList):
     for organism in plantList:
         threeLetterIdentifier = organism
 
+        filename = "%s.gff3" % threeLetterIdentifier
+
         # Try to download the gff3 file for this organism.
         try:
-            ftp.retrbinary("RETR %s.gff3" % threeLetterIdentifier, open(
-                "miRBase/%s.gff3" % threeLetterIdentifier, "wb").write)
+            with open("miRBase/%s" % filename, 'wb') as fhandle:
+                ftp.retrbinary("RETR " + filename, fhandle.write)
 
         # If there is an error when opening an ftp file, it is because the
         # GFF file does not exist for this organism. This seems to be
         # caused by an organism not having a sequenced genome 
         except ftplib.all_errors as e:
-            os.remove("miRBase/%s.gff3" % threeLetterIdentifier)
+            os.remove("miRBase/%s" % filename)
 
     ftp.close()
 

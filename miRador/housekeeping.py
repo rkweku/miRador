@@ -9,7 +9,8 @@ import setupMiRBase
 
 def housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
-        perlPath, outputFolder, organism, version):
+        blastnPath, makeblastdbPath, perlPath, RNAFoldPath, RNAPlotPath,
+        ps2pdfwrPath, outputFolder, organism, version):
     """Perform various housekeeping functions including the checks that all
     external program dependencies exist, that files being referenced and
     folders that will be written to exist and are created. Additionally,
@@ -28,7 +29,12 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             finding files that end with chopped.txt from libFolder
         bowtiePath: The path of bowtie on the system
         einvertedPath: The path of einverted on the system
+        blastnPath: The path of blastn on the system
+        makeblastdbPath: The path of makeblastdb on the system
         perlPath: The path of perl on the system
+        RNAFoldPath: The path of RNAFold on the system
+        RNAPlotPath: The path of RNAPlot on the system
+        ps2pdfwrPath: The path of ps2pdfwr on the system
         outputFolder: The config entry for the output folder. Can be blank
         organism: The three letter identifier of the organism being studied
         version: The version of miRBase to be queried
@@ -88,6 +94,31 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             "Correct before running again" % perlPath)
         sys.exit()
 
+    if(not shutil.which(blastnPath)):
+        logger.error("blastn could not be found at the provided path: %s\n"\
+            "Correct before running again" % blastnPath)
+        sys.exit()
+
+    if(not shutil.which(makeblastdbPath)):
+        logger.error("makeblastdb could not be found at the provided path: "\
+            "%s\nCorrect before running again" % makeblastdbPath)
+        sys.exit()
+
+    if(not shutil.which(RNAFoldPath)):
+        logger.error("RNAFold could not be found at the provided path: %s\n"\
+            "Correct before running again" % RNAFoldPath)
+        sys.exit()
+
+    if(not shutil.which(RNAPlotPath)):
+        logger.error("RNAPlot could not be found at the provided path: %s\n"\
+            "Correct before running again" % RNAPlotPath)
+        sys.exit()
+
+    if(not shutil.which(ps2pdfwrPath)):
+        logger.error("ps2pdfwr could not be found at the provided path: %s\n"\
+            "Correct before running again" % ps2pdfwrPath)
+        sys.exit()
+
     ### Create the necessary folders if they don't already exist
     # Create a folderfor genome if it does not exist already
     if not os.path.isdir("genome"):
@@ -108,7 +139,11 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         if(outputFolder == libFolder):
             logger.error("outputFolder and libFolder cannot be the same "\
                 "folder. Please rename outputFolder and run again")
-            sys.exit()
+            sys.exit() 
+
+        # Create the output folder if it does not yet exist
+        if(not os.path.isdir(outputFolder)):
+            os.mkdir("outputFolder")
 
         # Delete the libs folder if it exists already
         if(os.path.isdir("%s/libs" % outputFolder)):
@@ -119,25 +154,16 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             shutil.rmtree("%s/images" % outputFolder)
 
         # Delete the various output files if they exist already
-        if(os.path.isfile("%s/%s_blastResults.txt" % (outputFolder,
-                outputFolder))):
-            os.remove("%s/%s_blastResults.txt" % (outputFolder, outputFolder))
-        if(os.path.isfile("%s/%s_finalAnnotatedCandidates.csv" % \
-                (outputFolder, outputFolder))):
-            os.remove("%s/%s_finalAnnotatedCandidates.csv" % (outputFolder,
-                outputFolder))
-        if(os.path.isfile("%s/%s_finalAnnotatedCandidates.fa" % \
-                (outputFolder, outputFolder))):
-            os.remove("%s/%s_finalAnnotatedCandidates.fa" % (outputFolder,
-                outputFolder))
-        if(os.path.isfile("%s/%s_preAnnotatedCandidates.csv" % \
-                (outputFolder, outputFolder))):
-            os.remove("%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
-                outputFolder))
-        if(os.path.isfile("%s/%s_preAnnotatedCandidates.fa" % \
-                (outputFolder, outputFolder))):
-            os.remove("%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
-                outputFolder))
+        if(os.path.isfile("%s/blastResults.txt" % outputFolder)):
+            os.remove("%s/blastResults.txt" % outputFolder)
+        if(os.path.isfile("%s/finalAnnotatedCandidates.csv" % outputFolder)):
+            os.remove("%s/finalAnnotatedCandidates.csv" % outputFolder)
+        if(os.path.isfile("%s/finalAnnotatedCandidates.fa" % outputFolder)):
+            os.remove("%s/finalAnnotatedCandidates.fa" % outputFolder)
+        if(os.path.isfile("%s/preAnnotatedCandidates.csv" % outputFolder)):
+            os.remove("%s/preAnnotatedCandidates.csv" % outputFolder)
+        if(os.path.isfile("%s/preAnnotatedCandidates.fa" % outputFolder)):
+            os.remove("%s/preAnnotatedCandidates.fa" % outputFolder)
 
     ###########################################################################
 

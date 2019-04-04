@@ -144,11 +144,17 @@ def miRador():
 
     parallel = config.getint("General", "parallel")
     nthreads = config.get("General", "nthreads")
+    blastnPath = os.path.expanduser(config.get("General", "blastnPath"))
     bowtiePath = os.path.expanduser(config.get("General", "bowtiePath"))
     bowtieBuildPath = os.path.expanduser(config.get("General",
         "bowtieBuildPath"))
     einvertedPath = os.path.expanduser(config.get("General", "einvertedPath"))
+    makeblastdbPath = os.path.expanduser(config.get("General",
+        "makeblastdbPath"))
     perlPath = os.path.expanduser(config.get("General", "perlPath"))
+    RNAFoldPath = os.path.expanduser(config.get("General", "RNAFoldPath"))
+    RNAPlotPath = os.path.expanduser(config.get("General", "RNAPlotPath"))
+    ps2pdfwrPath = os.path.expanduser(config.get("General", "ps2pdfwrPath"))
     outputFolder = config.get("General", "outputFolder", fallback = "")
 
     # Required overhang between top and bottom strands of miRNA duplex
@@ -158,10 +164,11 @@ def miRador():
 
     # Perform various housekeeping functions including the checks that all
     # external program dependencies exist, that files being referenced and
-    # folders that will be written to exist and are created. 
+    # folders that will be written to exist and are created.
     mirBaseDict = housekeeping.housekeeping(genomeFilename, libFilenamesString,
         libFolder, libFilenamesList, bowtiePath, bowtieBuildPath,
-        einvertedPath, perlPath, outputFolder, organism, version)
+        einvertedPath, blastnPath, makeblastdbPath, perlPath, RNAFoldPath,
+        RNAPlotPath, ps2pdfwrPath, outputFolder, organism, version)
 
     # Set the number of cores, if parallel is on
     if(parallel):
@@ -442,14 +449,13 @@ def miRador():
     ################### Annotate candidate miRNAs ############################
 
     ##########################################################################
-
+    
     logger.info("Annotating candidate miRNAs")
 
     funcStart = time.time()
 
     subjectSequencesFilename = "miRBase/miRBasePlantMirnas.fa"
-    queryMirnasFilename = "%s/%s_preAnnotatedCandidates.fa" % (outputFolder,
-        outputFolder)
+    queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
     dbFilename = "miRBase/miRBasePlantMirnas.db"
 
     # Check to see if the BLAST database needs to be updated
@@ -460,14 +466,15 @@ def miRador():
     if(updateFlag):
         # Create the database from the file holding the subject sequences
         localStartTime = time.time()
-        dbName = annotateCandidates.createBlastDB(subjectSequencesFilename,
-            dbFilename)
+        dbName = annotateCandidates.createBlastDB(makeblastdbPath, 
+            subjectSequencesFilename, dbFilename)
 
     # BLAST query miRNAs to known miRNAs
     localStartTime = time.time()
     logger.info("Performing BLAST")
-    blastFilename = annotateCandidates.blastMirnas(subjectSequencesFilename,
-        dbFilename, queryMirnasFilename, outputFolder)
+    blastFilename = annotateCandidates.blastMirnas(blastnPath, 
+        subjectSequencesFilename, dbFilename, queryMirnasFilename,
+        outputFolder, nthreads)
 
     # Add field for the subject and query sequences in the BLAST output
     # because these sequences are not within by default
@@ -487,7 +494,8 @@ def miRador():
     # Properly annotate the candidate miRNAs with the data in similarityDict
     annotateCandidates.annotateCandidates(outputFolder, similarityDict,
         organism, mirBaseDict, GenomeClass.IRDictByChr, numLibs,
-        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath)
+        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath,
+        RNAFoldPath, RNAPlotPath, ps2pdfwrPath)
 
     # Delete the single chromosome files used by einverted and the
     # draw functions to clean up temp file

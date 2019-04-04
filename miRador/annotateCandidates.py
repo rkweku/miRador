@@ -3,6 +3,7 @@ import datetime
 import os
 import shutil
 import subprocess
+import sys
 
 from Bio.Blast.Applications import NcbiblastnCommandline
 from PyPDF2 import PdfFileReader, PdfFileMerger
@@ -10,7 +11,7 @@ from PyPDF2 import PdfFileReader, PdfFileMerger
 import log
 
 def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
-        perlPath):
+        perlPath, RNAFoldPath, RNAPlotPath, ps2pdfwrPath):
     """Using RNAFold, draw the miRNA and the miRNA* on the precursor
     Args:
         precursorSeq: The sequence of the miRNA precursor
@@ -21,6 +22,9 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         startSeq: The sequence of the miRNA* on this duplex
         outputFolder: The name of the output folder
         perlPath: The path of perl on this system
+        RNAFoldPath: The path of RNAFold on this system
+        RNAPlotPath: The path of RNAPlot on this system
+        ps2pdfwrPath: The path of ps2pdfwr on this system
 
     """
     # Initialize our logger
@@ -32,13 +36,16 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         starSeq.replace("T", "U")))
     mir_out.close()
 
+    # Call the perl drawPrecursor program on our data
     returnCode = subprocess.call([perlPath, "drawPrecursor/drawPrecursor.pl",
-        mirName, precursorSeq, tempFilename])
+        RNAFoldPath, RNAPlotPath, ps2pdfwrPath, mirName, precursorSeq,
+        tempFilename])
 
     if(returnCode):
-        logger.error("Something went wrong when running drawPrecursor." \
-            "Command was\nperl drawPrecursor/drawPrecursor.pl %s %s %s" % \
-            (mirName, precursorSeq, tempFilename))
+        logger.error("Something went wrong when running drawPrecursor. " \
+            "Command was\nperl drawPrecursor/drawPrecursor.pl %s %s %s %s "\
+            "%s %s" % (RNAFoldPath, RNAPlotPath, ps2pdfwrPath, mirName,
+            precursorSeq, tempFilename))
         sys.exit()
 
     # Rename the file from the default drawPrecursor Structure_plot file
@@ -138,10 +145,11 @@ def checkNeedUpdateByDate(subjectSequencesFilename, dbName):
         return(False)
 
 
-def createBlastDB(subjectSequencesFilename, dbFilename):
+def createBlastDB(makeblastdbPath, subjectSequencesFilename, dbFilename):
     """Create a local DB with the subject sequences for BLAST later
 
     Args:
+        makeblastdbPath: The path to makeblastdb on this system
         subjectSequencesFilename: The name of the file FASTA file holding 
             all the sequenes to be BLASTed against
         dbFilename: The name of the database file that will be written to
@@ -149,34 +157,36 @@ def createBlastDB(subjectSequencesFilename, dbFilename):
     """
 
     # Create a blast DB from the small RNAs
-    os.system("makeblastdb -in %s -dbtype nucl -parse_seqids -out %s" %
-        (subjectSequencesFilename, dbFilename))
+    subprocess.call([makeblastdbPath, "-in", subjectSequencesFilename,
+        "-dbtype", "nucl", "-parse_seqids", "-out", dbFilename])
 
-def blastMirnas(subjectSequencesFilename, dbFilename,
-        candidateSequencesFilename, outputFolder):
+def blastMirnas(blastnPath, subjectSequencesFilename, dbFilename,
+        candidateSequencesFilename, outputFolder, nthreads):
     """Create a subject database for the known miRNAs and BLAST
        all candidate miRNAs to those miRNAs to find the evolutionarily
        conserved miRNAS
 
     Args:
+        blastnPath: The path to blastn on this system
         flastFilename: The name of the FASTA file holding the subject
             sequences
         dbFilename: The name of the database file that will be written to
         candidateSequencesFilename: The name of the FASTA file holding the
             candidate sequences
         outputFolder: The path to the output folder for this run
+        nthreads: The number of threads to utilize
 
     Returns:
         The BLAST results in plain text format
 
     """
 
-    blastFilename = "%s/%s_blastResults.txt" % (outputFolder, outputFolder)
+    blastFilename = "%s/blastResults.txt" % outputFolder
 
     # Run blastn-short, but set word size to 11 as 5 is too short IMO
-    NcbiblastnCommandline(query=candidateSequencesFilename,
-        db=dbFilename, task="blastn-short", outfmt=6, num_threads=8,
-        strand='plus', out=blastFilename)()[0]
+    subprocess.call([blastnPath, "-query", candidateSequencesFilename,
+        "-db", dbFilename, "-task", "blastn-short", "-outfmt", "6",
+        "-num_threads", nthreads, "-strand", "plus", "-out", blastFilename])
 
     return(blastFilename)
 
@@ -193,7 +203,7 @@ def addSequencesToOutput(querySequencesFilename, subjectSequencesFilename,
 
     """
 
-    blastFilename = "%s/%s_blastResults.txt" % (outputFolder, outputFolder)
+    blastFilename = "%s/blastResults.txt" % outputFolder
 
     # Parse query and subject sequences 
     querySequences = getSequencesFromFasta(querySequencesFilename)
@@ -561,7 +571,8 @@ def mergePDF(outputFolder):
     merger.write("%s/images/mergedPrecursors.pdf" % outputFolder)
 
 def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
-        IRDictByChr, numLibs, chrDict, chrFilenamesList, perlPath):
+        IRDictByChr, numLibs, chrDict, chrFilenamesList, perlPath,
+        RNAFoldPath, RNAPlotPath, ps2pdfwrPath):
     """Using the similarityDict, annotate the data in the pre-annotated file
     with the proper miRNA name, with the already existing family(ies) that
     the candidate miRNA likely belongs to, or the conservation of an existing
@@ -585,15 +596,15 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
         chrFilenamesList: List of filenames containing the chromosomes of
             the genome being analyzed
         perlPath: The path to perl
+        RNAFoldPath: The path of RNAFold on this system
+        RNAPlotPath: The path of RNAPlot on this system
+        ps2pdfwrPath: The path of ps2pdfwr on this system
 
     """
 
-    preAnnotationFilename = "%s/%s_preAnnotatedCandidates.csv" % (outputFolder,
-        outputFolder)
-    annotatedFilename = "%s/%s_finalAnnotatedCandidates.csv" % (outputFolder,
-        outputFolder)
-    fastaFilename = "%s/%s_finalAnnotatedCandidates.fa" % (outputFolder,
-        outputFolder)
+    preAnnotationFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
+    annotatedFilename = "%s/finalAnnotatedCandidates.csv" % outputFolder
+    fastaFilename = "%s/finalAnnotatedCandidates.fa" % outputFolder
 
     foundKnownDict = {}
 
@@ -795,7 +806,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
             # Draw this candidate miRNA and its miRNA* on the
             # precursor using RNAFold
             drawPrecursor(precursorSeq, line[mirNameIndex], mirSeq, starSeq,
-                outputFolder, perlPath)
+                outputFolder, perlPath, RNAFoldPath, RNAPlotPath, ps2pdfwrPath)
 
     # Close the annotated and fasta output files
     annotatedOut.close()

@@ -8,7 +8,11 @@ miRador is a miRNA prediction tool developed to be the first of two compontents 
 There are several dependencies of miRador, all of which are checked prior to running. However, in order to meet all dependencies, users should download the following:
 
 ### Standalone packages
+`blast`: ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+
 `bowtie`: http://bowtie-bio.sourceforge.net/index.shtml
+
+`ps2pdfwr`: https://www.ghostscript.com/download.html
 
 `perl`: https://www.perl.org/get.html
 
@@ -17,16 +21,15 @@ There are several dependencies of miRador, all of which are checked prior to run
 `ViennaRNA`: https://www.tbi.univie.ac.at/RNA/#download
 
 ### Python3 packages
-`biopython`: https://biopython.org/wiki/Download
 `PyPDF2`: https://pypi.org/project/PyPDF2/
 
-Upon python installation, external packages may be installed via pip. If your system does not have pip installed already, or you do not have pip for your version of python, you can follow the installation instructions here: https://pip.pypa.io/en/stable/installing/.
+Upon python installation, Python packages may be installed via pip. If your system does not have pip installed already, or you do not have pip for your version of python, you can follow the installation instructions here: https://pip.pypa.io/en/stable/installing/.
 
 If you do not have sudo privileges on your system, the --user option can be used when installing packages with pip. This will add the package to your local directory python directory and allow you to install any package without the need of sudo. To do this, open your terminal and simply type: `pip3 install --user PackageName`
 
 
 ## Configuration
-Running miRador requires modifyinga configuration file, initially named `miRador.ini`
+Running miRador requires modifying a configuration file, initially named `miRador.ini`
 
 ### Options
 |Option                   |Default |Description                                                                                   |
@@ -47,7 +50,11 @@ Running miRador requires modifyinga configuration file, initially named `miRador
 |bowtiePath               |        |Path of bowtie                                                                                |
 |bowtieBuildPath          |        |Path of bowtie-build                                                                          |
 |einvertedPath            |        |Path of einverted                                                                             |
-|perlPath                 |        |Path of perl                                                                                  |
+|RNAFoldPath              |        |Path of RNAFold                                                                               |
+|RNAPlotPath              |        |Path of RNAPlot                                                                               |
+|blastnPath               |        |Path of blastn                                                                                |
+|makeblastdbPath          |        |Path of makeblastdb                                                                           |
+|ps2pdfwrPath             |        |Path of ps2pdfwr                                                                              |
 |outputFolder             |        |Name of specific folder to write data to. *If folder exists, data within will be overwritten* |
 
 ## Examples

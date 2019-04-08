@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import sys
 
-from Bio.Blast.Applications import NcbiblastnCommandline
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
 import log

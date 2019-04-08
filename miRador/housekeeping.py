@@ -143,7 +143,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
 
         # Create the output folder if it does not yet exist
         if(not os.path.isdir(outputFolder)):
-            os.mkdir("outputFolder")
+            os.mkdir(outputFolder)
 
         # Delete the libs folder if it exists already
         if(os.path.isdir("%s/libs" % outputFolder)):

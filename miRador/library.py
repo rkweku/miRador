@@ -121,6 +121,8 @@ class Library:
         logger.info("Time to read library %s: %s seconds" % (self.filename,
             execTime))
 
+        log.closeLogger(logger)
+
         return(libDict)
 
     def mapper(self, indexFilename, bowtiePath, nthreads):
@@ -177,6 +179,8 @@ class Library:
                 sys.exit()
 
         logFile.close()
+
+        log.closeLogger(logger)
 
         return(logFilename)
 

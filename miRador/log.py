@@ -27,3 +27,17 @@ def setupLogger(name):
     logger.addHandler(fileHandler)
 
     return(logger)
+
+def closeLogger(logger):
+    """A function to close the logger for a method
+
+    Args:
+        logger: The logger instance
+
+    """
+
+    handlerList = logger.handlers[:]
+
+    for handler in handlerList:
+        handler.close()
+        logger.removeHandler(handler)

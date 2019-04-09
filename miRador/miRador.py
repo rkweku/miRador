@@ -478,7 +478,7 @@ def miRador():
 
     # Add field for the subject and query sequences in the BLAST output
     # because these sequences are not within by default
-    logger.info("Adding sequences to output file")
+    logger.info("Adding sequences to BLAST file")
     annotateCandidates.addSequencesToOutput(queryMirnasFilename,
         subjectSequencesFilename, outputFolder)
 
@@ -510,3 +510,5 @@ def miRador():
     execTime = round(progEnd - progStart, 2)
 
     logger.info("Total runtime was %s seconds" % execTime)
+
+    log.closeLogger(logger)

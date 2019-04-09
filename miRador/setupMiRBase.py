@@ -48,6 +48,9 @@ def checkNeedUpdate(version):
                 return(False)
 
     ftp.close()
+
+    log.closeLogger(logger)
+
     return(True)
 
 def downloadOrganismsAndMirnas(version):
@@ -116,6 +119,8 @@ def downloadOrganismsAndMirnas(version):
     os.remove("miRBase/mature.fa.gz")
 
     ftp.close()
+
+    log.closeLogger(logger)
 
 def findPlantSpeciesFromOrganisms():
     """Create a list of plant species using the data available in
@@ -302,5 +307,7 @@ def setupMiRBase(organism, version):
     # then read the file into a dictionary with parsePrecursorGFF
     if(os.path.isfile(gffFilename)):
         mirBaseDict = parsePrecursorGFF(gffFilename)
+
+    log.closeLogger(logger)
 
     return(mirBaseDict)

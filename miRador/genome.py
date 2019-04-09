@@ -154,6 +154,8 @@ class Genome:
 
             logFile.close()
 
+        log.closeLogger(logger)
+
         return(indexFilename)
 
     def combineIRTempFiles(self, IRFastaFilenamesList,
@@ -298,6 +300,8 @@ class Genome:
                 if os.path.exists(toDelete):
                     os.remove(toDelete)
 
+        log.closeLogger(logger)
+
         return(IRCounter)
 
 def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
@@ -358,5 +362,7 @@ def runEinverted(einvertedPath, chrFilename, match, mismatch, gap,
 
     # Close FNULL
     FNULL.close()
+
+    log.closeLogger(logger)
 
     return(outputFastaFilename, outputAlignmentFilename)

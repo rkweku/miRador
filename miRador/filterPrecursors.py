@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import sys
 
+from Bio.Seq import Seq
+from Bio.Alphabet import generic_dna
 import log
 
 def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
@@ -20,7 +22,7 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
     """
 
     # Open the output file
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         # loop through the chromosomes, sorted in numerical order
         for chrName in sorted(chrDict.keys()):
             chrIndex = chrDict[chrName]
@@ -39,16 +41,16 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
 
                 # Write the precursor (its name, coordinates, and alignment)
                 # to the precursor file
-                f.write('%s,%s,' % (precursorName, chrName))
+                f.write("%s,%s," % (precursorName, chrName))
                 for i in range(len(coordinates)):
                     if(i == 5 or i == 6 or i == 7 or i == 8):
                         # We want to use U instead of T, but since the strand
                         # and alignment indicators (which are also written
                         # with this line) can't contain T, this should be
                         # safe here
-                        f.write('%s\n' % coordinates[i].replace("T", "U"))
+                        f.write("%s\n" % coordinates[i].replace("T", "U"))
                     else:
-                        f.write('%s,' % coordinates[i]) 
+                        f.write("%s," % coordinates[i]) 
 
                 # Loop through all duplexes that were identified for a
                 # precursor and write the stored information to the file
@@ -80,11 +82,11 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                     # miRNA and miRNA*
                     if(len(duplexDict.keys()) > 1):
                         mirName = "candidate-%s_%s" % (precursorName.split(
-                            'precursor-')[1], duplexCount)
+                            "precursor-")[1], duplexCount)
                         duplexCount += 1
                     else:
                         mirName = "candidate-%s" % precursorName.split(
-                            'precursor-')[1]
+                            "precursor-")[1]
 
                     f.write("%s-%s\tSequence: %s\tPosition:%s\t"\
                         "Abundance:%s\n" % (mirName, arm,
@@ -121,7 +123,7 @@ def findSequenceInIR(sequence, IRArm, tagLength):
 
     # Get the start position of the sequence on the IR arm without any
     # gap sequences
-    localStart = IRArm.replace('-','').find(sequence)
+    localStart = IRArm.replace("-","").find(sequence)
 
     # Initialize offset and sequence gap count to 0
     offset = 0
@@ -140,7 +142,7 @@ def findSequenceInIR(sequence, IRArm, tagLength):
         # position + the current offset (important because if 
         # is a gap after the previously found offset)
         offset = IRArm[:localStart + \
-            offset].count('-')
+            offset].count("-")
 
         # If the new offset is the same as the
         # old (number of gaps), set the
@@ -152,7 +154,7 @@ def findSequenceInIR(sequence, IRArm, tagLength):
     baseCount = 0
 
     # Initialize a variable to hold the sequence with gaps
-    sequenceWithGaps = ''
+    sequenceWithGaps = ""
 
     # Initialize a counter to 0 so that we can
     # fill the new sequence variables one by one
@@ -173,7 +175,7 @@ def findSequenceInIR(sequence, IRArm, tagLength):
         # baseCount variable to ensure we only
         # record as many bases to replicate the
         # mapped sRNA
-        if(base != '-'):
+        if(base != "-"):
             baseCount += 1
 
         else:
@@ -200,30 +202,30 @@ def getAlign(base1, base2):
     """
 
     # Block to check if the alignment is a gap
-    if(base1 == '-' or base2 == '-'):
+    if(base1 == "-" or base2 == "-"):
         return("gap")
 
     # Block to check for simple mismatches (ie anything that cannot
     # possibly be a G-U wobble
-    if(base1 == 'A' and base2 != 'T'):
+    if(base1 == "A" and base2 != "T"):
         return("mismatch")
-    elif(base1 == 'C' and base2 != 'G'):
+    elif(base1 == "C" and base2 != "G"):
         return("mismatch")
 
     # Block to check for a G-C match or G-U wobble
-    elif(base1 == 'G'):
-        if(base2 == 'C'):
+    elif(base1 == "G"):
+        if(base2 == "C"):
             return("match")
-        elif(base2 == 'T'):
+        elif(base2 == "T"):
             return("wobble")
         else:
             return("mismatch")
 
     # Block to check for U-A match or U-G wobble
-    elif(base1 == 'T'):
-        if(base2 == 'A'):
+    elif(base1 == "T"):
+        if(base2 == "A"):
             return("match")
-        elif(base2 == 'G'):
+        elif(base2 == "G"):
             return("wobble")
         else:
             return("mismatch")
@@ -299,7 +301,7 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
     candidateSequenceLength = len(candidateSequence)
     variantAbundanceList = []
 
-    if(strand == 'w'):
+    if(strand == "w"):
         # Check if any variants exist in which the 5' is tailed by 1 nt
         if(candidatePosition - 1 in mappedTagsDict):
             # Loop through all tags that map to this location to identify
@@ -519,7 +521,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
                 # If the strand is w, the sequence will require no
                 # modifications
-                if(strand == 'w'):
+                if(strand == "w"):
                     sequence5 = mapped5Tag[0]
 
                 # If the strand is c, we need to reverse complement
@@ -548,7 +550,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
                 # Check to confirm that the sequence with gaps is the
                 # same sequence as before
-                if(oldSequence5 != sequence5.replace('-','')):
+                if(oldSequence5 != sequence5.replace("-","")):
                     logger.error("findSequenceInIR messed up for %s. "\
                         "Contact Reza to debug" % oldSequence5)
                     logger.error(precursorName, oldSequence5, sequence5,
@@ -577,7 +579,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
                         # If the strand is w, the sequence needs to be
                         # reversed because it is on the 3' arm of the IR
-                        if(strand == 'w'):
+                        if(strand == "w"):
                             sequence3 = mapped3Tag[0][::-1]
 
                         # If the strand is c, the sequence needs to be
@@ -603,7 +605,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
 
                         # Check to confirm that the sequence with gaps is
                         # the same sequence as before
-                        if(oldSequence3 != sequence3.replace('-','')):
+                        if(oldSequence3 != sequence3.replace("-","")):
                             logger.error("findSequenceInIR messed up for %s. "\
                                 "Contact Reza to debug" % oldSequence3)
                             logger.error(precursorName, oldSequence3,
@@ -613,8 +615,11 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                         # If there is a 2-nt overhang on either the sequence,
                         # we have a candidate duplex and will investigate
                         # it further
-                        if((local5End - local3End == overhang) and (
-                                local5Start - local3Start == overhang)):
+                        if((strand == "c" and (local3Start - local5Start == 
+                                overhang) and (local3End - local5End == 
+                                overhang)) or (strand == "w" and (local5End 
+                                - local3End == overhang) and (local5Start - 
+                                local3Start == overhang))):
                             # Because we can have overhangs, the alignment
                             # should start and end at the postiions just
                             # prior to the overhang
@@ -729,6 +734,8 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                         finalCandidates[precursorName][
                                             mapped3Tag[0]] = duplex
 
+    log.closeLogger(logger)
+
     return(finalCandidates)
 
 def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
@@ -754,7 +761,7 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
     fastaFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
 
     # Open the output files
-    with open(outputFilename, 'w') as f, open(fastaFilename, 'w') as g:
+    with open(outputFilename, "w") as f, open(fastaFilename, "w") as g:
         # Write the column names
         f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Hits,"\
             "miR Length,Star Position,Star Sequence,Star Hits,Star Length,")
@@ -811,21 +818,21 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # we don't need to create a unique ID other than
                     # the name of the precursor
                     if(len(candidatesDict) == 1):
-                        mirName = 'candidate-%s-%s' % (precursorName.split(
-                            'precursor-')[1], arm)
+                        mirName = "candidate-%s-%s" % (precursorName.split(
+                            "precursor-")[1], arm)
 
                     # If there is more than one miRNA candidate in the
                     # duplex, append mirCount to the precursor number
                     # to create a unique identifier for each miRNA
                     # in the duplex
                     else:
-                        mirName = 'candidate-%s_%s-%s' % (precursorName.split(
-                            'precursor-')[1], mirCount, arm)
+                        mirName = "candidate-%s_%s-%s" % (precursorName.split(
+                            "precursor-")[1], mirCount, arm)
                         mirCount += 1
 
                     # Write the candidate name and the sequence to the
                     # fasta file
-                    g.write('>%s\n' % mirName)
+                    g.write(">%s\n" % mirName)
                     g.write("%s\n" % mirSeq.replace("T", "U"))
 
                     f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,

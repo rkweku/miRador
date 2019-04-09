@@ -181,4 +181,6 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
 
     mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
 
+    log.closeLogger(logger)
+
     return(mirBaseDict)

@@ -63,6 +63,8 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
         logger.error("Failed to delete RNAplot folder %s_RNAplot_out" %\
             mirName)
 
+    log.closeLogger(logger)
+
 def getFastaDate(filename):
     """Get the date of the input filename creation date
 
@@ -109,6 +111,8 @@ def getLocalDBDate(dbName):
             % dbName)
         return(datetime.datetime(1,1,1))
 
+    log.closeLogger(logger)
+
 def checkNeedUpdateByDate(subjectSequencesFilename, dbName):
     """Check to see if the BLAST database needs to be updated
 
@@ -143,6 +147,7 @@ def checkNeedUpdateByDate(subjectSequencesFilename, dbName):
         "with the BLAST.")
         return(False)
 
+    log.closeLogger(logger)
 
 def createBlastDB(makeblastdbPath, subjectSequencesFilename, dbFilename):
     """Create a local DB with the subject sequences for BLAST later
@@ -547,6 +552,8 @@ def annotateIdenticalCandidates(similarityDict, mirBaseDict, identicalList,
         for identicalMirna in similarityDict[mirName]:
             toAdd = "%s%s " % (toAdd, identicalMirna)
         line.append(toAdd)
+
+    log.closeLogger(logger)
 
     return(line)
 

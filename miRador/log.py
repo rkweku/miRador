@@ -24,6 +24,7 @@ def setupLogger(name):
 
     # Setup the file handler
     fileHandler = logging.FileHandler('miRador.log')
+    fileHandler.setFormatter(formatter)
     logger.addHandler(fileHandler)
 
     return(logger)

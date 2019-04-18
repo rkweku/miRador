@@ -622,6 +622,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
     header = preAnnotatedFile[0]
     header.append("Classification Flag")
 
+    # A list of counts of the classification flags that have been identified
+    # in this analysis
+    classificationCountsList = [0, 0, 0, 0, 0]
+
     # Get the index of the first library proportion. Useful for
     # when we need to validate novel tags in more than 1 library,
     # but we won't use it for conserved families already found
@@ -671,6 +675,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                 line = annotateIdenticalCandidates(similarityDict, 
                     mirBaseDict, identicalList, header, line, outputFolder)
 
+                if(line[-1] == "Known"):
+                    classificationCountsList[0] += 1
+
+                elif("Identical to the following" in line[-2]):
+                    classificationCountsList[1] += 1
+
                 # Write the line to a file once the candidate miRNA has
                 # been renamed
                 for i in range(len(line)):
@@ -706,6 +716,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     # ensure this flag will be before any conserved family
                     # flag as this is the better of the two
                     if(organism in organismList):
+                        # Only add this flag to the summary list if 
+                        # hasn't been worked with already (because these
+                        # can hit more than 1 known miRNA)
+                        if(not similarFlag):
+                            classificationCountsList[2] += 1
                         similarFlag = True
                         line.insert(endIterIndex, "New member of existing "\
                             "family")
@@ -722,6 +737,12 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                             if(float(line[i])):
                                 libCount += 1
                         if(libCount > 1 and libCount > float(numLibs * .1)):
+                            # Only add this flag to the summary list if 
+                            # hasn't been worked with already (because these
+                            # can hit more than 1 known miRNA)
+                            if(not similarFlag):
+                                classificationCountsList[3] += 1
+
                             similarFlag = True
                             line.append("Conserved family of the following:")
                             line.append(mirFamily)
@@ -772,6 +793,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
             # libraries, then we will confirm the replication requirement
             if(libCount > 1 and libCount > float(numLibs * .1)):
                 line.append("Novel")
+                classificationCountsList[4] += 1
 
                 for i in range(len(line)):
                     if i == len(line) - 1:
@@ -818,4 +840,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
     annotatedOut.close()
     fastaOut.close()
 
+    # Merge the precursors into one file
     mergePDF(outputFolder)
+
+    return(classificationCountsList)

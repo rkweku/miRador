@@ -6,6 +6,8 @@ import sys
 
 import log
 
+## This function is saved in the event that we ever decide to perform bowtie
+## once for all input library sequences. 
 #def mergeLibSeqs(LibList):
 #    """
 #    Create a list of unique tags for the purpose of mapping unique
@@ -50,16 +52,31 @@ class Library:
 
     def __init__(self, filename, chrDict):
         self.filename = filename
-        self.fastaFilename = "%s.fa" % os.path.splitext(self.filename)[0]
         self.mappedReads = 0
 
-        if(not os.path.isdir("libs")):
-            os.mkdir("libs")
+        # Create the name of the temp fasta file. This is needed for
+        # the bowtie mapping step
+        self.fastaFilename = "miRadorTempFolder/fastaLibs/%s.fa" %\
+            os.path.basename(self.filename)
+        # Create a folder for the temp fasta files if it doesn't
+        # exist yet
+        if(not os.path.isdir("miRadorTempFolder/fastaLibs")):
+            os.mkdir("miRadorTempFolder/fastaLibs")
 
-        self.libDict = self.readTagCount()
+        # Identify the type of file format of this library
+        self.libType = self.identifyFileType()
+
+        # Identify the format of the input library file
+        if(self.libType == "fasta"):
+            self.libDict = self.readFasta()
+        elif(self.libType == "fastq"):
+            self.libDict = self.readFastq()
+        elif(self.libType == "tagCount"):
+            self.libDict = self.readTagCount()
 
         # Create the mapped filename for this library
-        self.mapFilename = "%s.map" % os.path.splitext(self.filename)[0]
+        self.mapFilename = "miRadorTempFolder/bowtieOutput/%s.map" %\
+             os.path.basename(self.filename)
 
         # Using chrDict from the genome file, create a tuple of multiple
         # dictionaries. Each dictionary in the tuple will represent a 
@@ -69,12 +86,178 @@ class Library:
         # the sequences of the reads that map there.
         self.mappedList = [{"w": {}, "c": {}} for i in range(len(chrDict))]
 
+    def identifyFileType(self):
+        """Investigate the first few linse of the library filename to
+        determine its format so that the proper file parser function
+        is used
+
+        Returns:
+            A simple string of fasta, fastq, or tagCount
+
+        """
+
+        # Initialize our logger
+        logger = log.setupLogger("identifyFileType")
+
+        libType = ""
+
+        with open(self.filename) as f:
+            lines = [line for line in f][:4]
+
+            # If the first character of the first line of the file is a >, and
+            # both the 2nd and 4th lines are nucleotide sequences, then we 
+            # should be able to call this file fasta
+            if(lines[0][0] == ">" and re.search("^[ACGT]*$",
+                    lines[1].rstrip().upper()) and re.search("^[ACGT]*$",
+                    lines[3].rstrip().upper())):
+                libType = "fasta"
+
+            # If the second line of the file is a nucleotide sequence, but
+            # the 4th is not, then it should be a fastq file
+            elif(re.search("^[ACGTN]*$", lines[1].rstrip().upper()) and 
+                    not re.search("^[ACGTN]*$", lines[3].rstrip().upper())):
+                libType = "fastq"
+
+            # If splitting the first line on a tab results in the first
+            # index being just a nucleotide sequence, then the input file
+            # is a tag count file
+            elif(re.search("^[ACGTN]*$", lines[0].split("\t")[0].upper())):
+                libType = "tagCount"
+
+            # If none of the previous tests passed, report an error to
+            # the user and kill the run
+            else:
+                logger.info("The data in %s was not recognized as a fasta, "\
+                    "fastq, or tag count file. Please check the file to "\
+                    "ensure that it is one of the recognized file types." %\
+                    self.filename)
+                log.closeLogger(logger)
+                sys.exit()
+
+        log.closeLogger(logger)
+
+        return(libType)
+
+    def readFasta(self):
+        """Read a library in FASTA format into memory as a dictionary.
+        The key will be the sequence, and the value will be the count of
+        times in which the tag was seen
+
+        Return:
+            Dictionary of the library file
+
+        """
+
+        # Initialize our logger
+        logger = log.setupLogger("readFasta")
+
+        # Start timer for function
+        funcStart = time.time()
+
+        # Create an empty dictionary to store the full library
+        libDict = {}
+
+        # Initialize a counter to simply name the reads in the temp fasta file
+        readCount = 1
+
+        # Open the file and loop through line by line to store the library into
+        # a dictionary. Each tag will be a key and the number of times seen
+        # will be the value
+        with open(self.filename) as f, open(self.fastaFilename, "w") as g:
+            for count, line in enumerate(f, start=0):
+                if(count % 2 == 1):
+                    # Store the sequence and count into variables, then add
+                    # them to the dictionary. There should not be any
+                    # duplicate sequences in this format, however,
+                    tag = line.rstrip()
+
+                    # If the tag already exists in the libDict, increment
+                    # the counter of the sequence and retain the empty hits 
+                    # variable as 0
+                    if(tag in libDict):
+                        currCount = libDict[tag][0]
+                        libDict[tag] = [currCount + 1, 0]
+                    else:
+                        libDict[tag] = [1, 0]
+
+                        # Write the sequence to a unique reads FASTA file
+                        g.write(">s_%s\n%s\n" % (readCount, tag))
+                        readCount += 1
+
+        # Stop timer for function
+        funcEnd = time.time()
+
+        # Calculate the execution time and print it to the user
+        execTime = round(funcEnd - funcStart, 2)
+        logger.info("Time to read library %s: %s seconds" % (self.filename,
+            execTime))
+
+        log.closeLogger(logger)
+
+        return(libDict)
+
+    def readFastq(self):
+        """Read a library in FASTQ format into memory as a dictionary.
+        The key will be the sequence, and the value will be the count of
+        times in which the tag was seen
+
+        Return:
+            Dictionary of the library file
+
+        """
+
+        # Initialize our logger
+        logger = log.setupLogger("readFastq")
+
+        # Start timer for function
+        funcStart = time.time()
+
+        # Create an empty dictionary to store the full library
+        libDict = {}
+
+        # Initialize a counter to simply name the reads in the temp fasta file
+        readCount = 1
+
+        # Open the file and loop through line by line to store the library into
+        # a dictionary. Each tag will be a key and the number of times seen
+        # will be the value
+        with open(self.filename) as f, open(self.fastaFilename, "w") as g:
+            for count, line in enumerate(f, start=0):
+                if(count % 4 == 1):
+                    # Store the sequence and count into variables, then add
+                    # them to the dictionary. There should not be any
+                    # duplicate sequences in this format, however,
+                    tag = line.rstrip()
+
+                    # If the tag already exists in the libDict, increment
+                    # the counter of the sequence and retain the empty hits 
+                    # variable as 0
+                    if(tag in libDict):
+                        currCount = libDict[tag][0]
+                        libDict[tag] = [currCount + 1, 0]
+                    else:
+                        libDict[tag] = [1, 0]
+
+                        # Write the sequence to a unique reads FASTA file
+                        g.write(">s_%s\n%s\n" % (readCount, tag))
+                        readCount += 1
+
+        # Stop timer for function
+        funcEnd = time.time()
+
+        # Calculate the execution time and print it to the user
+        execTime = round(funcEnd - funcStart, 2)
+        logger.info("Time to read library %s: %s seconds" % (self.filename,
+            execTime))
+
+        log.closeLogger(logger)
+
+        return(libDict)
+
     def readTagCount(self):
-        """Read a library in tag count format into memory. Because we are
-        performing miRNA identification with these sequences, we know 
-        that we will not need all sequences. Additionally, as each 
-        sequence is read, we will write this to a FASTA output file for
-        bowtie
+        """Read a library in tag count format into memory. Additionally,
+        as each sequence is read, we will write this to a FASTA output
+        file for bowtie
 
         Return:
             Dictionary of library read in
@@ -89,15 +272,14 @@ class Library:
 
         # Create an empty dictionary to store the full library
         libDict = {}
-        readCount = 1
 
-        # Open a file to write all FASTA sequences to
-        g = open(self.fastaFilename, "w")
+        # Initialize a counter to simply name the reads in the temp fasta file
+        readCount = 1
 
         # Open the file and loop through line by line to store the library into
         # a dictionary. Each tag will be a key and the abundance will be the
         # value
-        with open(self.filename) as f:
+        with open(self.filename) as f, open(self.fastaFilename, "w") as g:
             for line in f:
                 # Store the sequence and count into variables, then add them
                 # to the dictionary. There should not be any duplicate
@@ -106,12 +288,9 @@ class Library:
                 count = int(line.split("\t")[1].strip())
                 libDict[tag] = [count, 0]
 
+                # Write the sequence to a unique reads FASTA file
                 g.write(">s_%s\n%s\n" % (readCount, tag))
                 readCount += 1
-
-            logger.info("Total entries in library %s: %s" % (self.filename,
-                readCount))
-            g.close()
 
         # Stop timer for function
         funcEnd = time.time()
@@ -131,6 +310,7 @@ class Library:
         Args:
             indexFilename: Path and name of the index for the genome. 
             bowtiePath: The path of bowtie
+            nthreads: The number of threads to use with bowtie
         Returns:
             Filename of mapped data
 
@@ -145,9 +325,12 @@ class Library:
 
         logFilename = "%s_bowtie.log" % os.path.splitext(self.mapFilename)[:-1]
 
-        # Run bowtie
-        logger.info("Mapping small RNAs to the genome files for %s" %\
-            (self.fastaFilename))
+        if(self.libType == "tagCount"):
+            logger.info("Mapping small RNAs to the genome files for %s" %\
+                (self.fastaFilename))
+        else:
+            logger.info("Mapping small RNAs to the genome files for %s" %\
+                (self.filename))
 
         with open(logFilename, "w") as logFile:
             # Run bowtie with the following options:
@@ -170,12 +353,14 @@ class Library:
                 "-v 0", "-S", self.mapFilename, "--sam-nohead", "--no-unal"],
                 stderr = logFile)
 
+            # If there is a return code, report an error to the user and exit
             if(returnCode):
                 logger.error("Something went wrong when running bowtie. "\
-                    "Command was\n%s %s -f %s -a -m 50 --best --strata -v 0 "\
-                    "-S %s -P %s --sam-nohead --no-unal" % (bowtiePath, 
-                    indexFilename, self.fastaFilename, self.mapFilename,
-                    nthreads))
+                    "Command was\n%s %s -f %s -a -m 50 --best --strata "\
+                    "-v 0 -S %s -P %s --sam-nohead --no-unal" %\
+                    (bowtiePath, indexFilename, self.fastaFilename, 
+                    self.mapFilename, nthreads))
+
                 sys.exit()
 
         logFile.close()

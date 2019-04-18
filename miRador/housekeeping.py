@@ -25,8 +25,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFolder: The folder of the library files if the user chose
             to supply that instead of individual library paths
         libFilenamesList: The list of library paths that have already
-            been parsed either from libFilenamesString or supplied by
-            finding files that end with chopped.txt from libFolder
+            been parsed either from libFilenamesString
         bowtiePath: The path of bowtie on the system
         einvertedPath: The path of einverted on the system
         blastnPath: The path of blastn on the system
@@ -178,6 +177,10 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         os.mkdir("%s/libs" % outputFolder)
     if not os.path.isdir("%s/images" % outputFolder):
         os.mkdir("%s/images" % outputFolder)
+    if not os.path.isdir("miRadorTempFolder"):
+        os.mkdir("miRadorTempFolder")
+    if not os.path.isdir("miRadorTempFolder/bowtieOutput"):
+        os.mkdir("miRadorTempFolder/bowtieOutput")
 
     mirBaseDict = setupMiRBase.setupMiRBase(organism, version)
 

@@ -31,6 +31,35 @@ import log
 import mapSRNAsToIRs
 import setupMiRBase
 
+def createSummary(classificationCountsList, outputFolder, runTime):
+    """Create a summary file for this analysis to report how many miRNAs
+    of each type was predicted
+
+    Args:
+        classificationCountsList: A list of the counts identified in each
+            classification category
+        outputFolder: Name of the folder where the results will be written to
+        runTime: The total runtime of the program
+
+    """
+
+    summaryFilename = "%s/summary.txt" % outputFolder
+
+    f_out = open(summaryFilename, "w")
+
+    f_out.write("Total miRNAs predicted: %s\n" % sum(classificationCountsList))
+    f_out.write("Total known: %s\n" % classificationCountsList[0])
+    f_out.write("Total identical to known miRNAs: %s\n" %\
+        classificationCountsList[1])
+    f_out.write("Total similar to at least one miRNA in this organism: %s\n" %\
+        classificationCountsList[2])
+    f_out.write("Total similar only to miRNAs outside this organism: %s\n" %\
+        classificationCountsList[3])
+    f_out.write("Total novel: %s\n" % classificationCountsList[4])
+    f_out.write("Total runtime was %s seconds" % runTime)
+
+    f_out.close()
+
 def miRador():
     """Parse configuration file and make necessary calls to the various
     helper functions to perform the entire miRNA prediction of the user
@@ -118,12 +147,11 @@ def miRador():
         libFilenamesList = libFilenamesString.split(",")
 
     # If libFolder was specified, loop through the files in the folder
-    # and add all files that end with "chopped.txt" to to libFilenamesList
+    # and add all files to libFilenamesList
     if(libFolder):
         for file in os.listdir(libFolder):
-            if file.endswith(".txt"):
-                libFilenamesList.append("%s/%s" % (libFolder,
-                    os.path.join(file)))
+            libFilenamesList.append("%s/%s" % (libFolder,
+                os.path.join(file)))
 
     # Do a check to confirm the user did not enter the same library
     # multiple times in libFilenamesList. First, we don't want to
@@ -142,6 +170,7 @@ def miRador():
     organism = config.get("miRBase", "organism")
     version = config.get("miRBase", "version", fallback = "CURRENT")
 
+    cleanupFlag = config.getint("General", "cleanupFlag", fallback = 1)
     parallel = config.getint("General", "parallel")
     nthreads = config.get("General", "nthreads")
     blastnPath = os.path.expanduser(config.get("General", "blastnPath"))
@@ -276,7 +305,7 @@ def miRador():
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)
-        logger.info("Time to run bowtie for %s: %s seconds" % \
+        logger.info("Runtime of bowtie for %s: %s seconds" % \
             (Lib.mapFilename, execTime))
 
         logger.info("Creating the mapped list for %s" % Lib.filename)
@@ -492,10 +521,11 @@ def miRador():
         organism)
 
     # Properly annotate the candidate miRNAs with the data in similarityDict
-    annotateCandidates.annotateCandidates(outputFolder, similarityDict,
-        organism, mirBaseDict, GenomeClass.IRDictByChr, numLibs,
-        GenomeClass.chrDict, GenomeClass.chrFilenamesList, perlPath,
-        RNAFoldPath, RNAPlotPath, ps2pdfwrPath)
+    classificationCountsList = annotateCandidates.annotateCandidates(
+        outputFolder, similarityDict, organism, mirBaseDict,
+        GenomeClass.IRDictByChr, numLibs, GenomeClass.chrDict,
+        GenomeClass.chrFilenamesList, perlPath, RNAFoldPath, RNAPlotPath,
+        ps2pdfwrPath)
 
     # Delete the single chromosome files used by einverted and the
     # draw functions to clean up temp file
@@ -512,3 +542,12 @@ def miRador():
     logger.info("Total runtime was %s seconds" % execTime)
 
     log.closeLogger(logger)
+
+    # Write a summary file with details of the analysis
+    createSummary(classificationCountsList, outputFolder, execTime)
+
+    # If cleanup flag is set, remove the temp folder containing bowtie
+    # output data as well as potential temp fasta files created when 
+    # a user input tag count files
+    if(cleanupFlag):
+        shutil.rmtree("miRadorTempFolder")

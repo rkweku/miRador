@@ -461,7 +461,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
             to the precursor, identified by the precursor name
         IRDict: Dictionary of the inverted repeats in one chromosome
         libDict: The entire library dictionary to be queried for abundances
-        overhang: Maximum length of overhang that a duplex can have
+        overhang: Specific length of overhang that a duplex must have
     Returns:
         Dictionary of all precursors and the miRNA:miRNA* duplexes within
         that pass all filters
@@ -612,7 +612,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                 sequence3, local3Start, local3End)
                             sys.exit()
 
-                        # If there is a 2-nt overhang on either the sequence,
+                        # If there is an overhang on either the sequence,
                         # we have a candidate duplex and will investigate
                         # it further
                         if((strand == "c" and (local3Start - local5Start == 

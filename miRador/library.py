@@ -350,14 +350,14 @@ class Library:
             ### which is why this log flie goes there
             returnCode = subprocess.call([bowtiePath, indexFilename, "-f",
                 self.fastaFilename, "-a", "-m 50", "--best", "--strata",
-                "-v 0", "-S", self.mapFilename, -P, nthreads, 
+                "-v 0", "-S", self.mapFilename, -p, nthreads, 
                 "--sam-nohead", "--no-unal"], stderr = logFile)
 
             # If there is a return code, report an error to the user and exit
             if(returnCode):
                 logger.error("Something went wrong when running bowtie. "\
                     "Command was\n%s %s -f %s -a -m 50 --best --strata "\
-                    "-v 0 -S %s -P %s --sam-nohead --no-unal" %\
+                    "-v 0 -S %s -p %s --sam-nohead --no-unal" %\
                     (bowtiePath, indexFilename, self.fastaFilename, 
                     self.mapFilename, nthreads))
 

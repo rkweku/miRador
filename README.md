@@ -27,6 +27,11 @@ Upon python installation, Python packages may be installed via pip. If your syst
 
 If you do not have sudo privileges on your system, the --user option can be used when installing packages with pip. This will add the package to your local directory python directory and allow you to install any package without the need of sudo. To do this, open your terminal and simply type: `pip3 install --user PackageName`
 
+### Perl Modules
+`IO::String`: https://metacpan.org/pod/IO::String
+
+This can be installed via CPAN. See instructions here:
+https://docs.huihoo.com/livejournal/server/lj.install.perl_setup.modules.html
 
 ## Configuration
 Running miRador requires modifying a configuration file, initially named `miRador.ini`

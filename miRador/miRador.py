@@ -108,7 +108,7 @@ def miRador():
 
     elif(einvertedPresets.lower() == "high"):
         match = 3
-        mismatch == -5
+        mismatch = -5
         gap = 7
         threshold = 50
         maxRepLen = 300

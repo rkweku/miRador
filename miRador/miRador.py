@@ -194,10 +194,11 @@ def miRador():
     # Perform various housekeeping functions including the checks that all
     # external program dependencies exist, that files being referenced and
     # folders that will be written to exist and are created.
-    mirBaseDict = housekeeping.housekeeping(genomeFilename, libFilenamesString,
-        libFolder, libFilenamesList, bowtiePath, bowtieBuildPath,
-        einvertedPath, blastnPath, makeblastdbPath, perlPath, RNAFoldPath,
-        RNAPlotPath, ps2pdfwrPath, outputFolder, organism, version)
+    mirBaseDict, outputFolder = housekeeping.housekeeping(genomeFilename,
+        libFilenamesString, libFolder, libFilenamesList, bowtiePath,
+        bowtieBuildPath, einvertedPath, blastnPath, makeblastdbPath,
+        perlPath, RNAFoldPath, RNAPlotPath, ps2pdfwrPath, outputFolder,
+        organism, version)
 
     # Set the number of cores, if parallel is on
     if(parallel):

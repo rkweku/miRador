@@ -350,7 +350,7 @@ class Library:
             ### which is why this log flie goes there
             returnCode = subprocess.call([bowtiePath, indexFilename, "-f",
                 self.fastaFilename, "-a", "-m 50", "--best", "--strata",
-                "-v 0", "-S", self.mapFilename, -p, nthreads, 
+                "-v 0", "-S", self.mapFilename, "-p", nthreads, 
                 "--sam-nohead", "--no-unal"], stderr = logFile)
 
             # If there is a return code, report an error to the user and exit

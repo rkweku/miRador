@@ -187,4 +187,4 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
 
     log.closeLogger(logger)
 
-    return(mirBaseDict)
+    return(mirBaseDict, outputFolder)

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 
+from Bio import pairwise2
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
 import log
@@ -64,6 +65,226 @@ def drawPrecursor(precursorSeq, mirName, mirSeq, starSeq, outputFolder,
             mirName)
 
     log.closeLogger(logger)
+
+def createListForAlign(filename):
+    """Create a list of tuples to be used for alignment between candidate
+    miRNAs and the miRBase miRNAs
+
+    Args:
+        filename: File to pull sequences from, in FASTA format
+
+    Returns:
+        List of tuples containing the sequence name and the sequence itself
+
+    """
+
+    sequenceList = []
+
+    # Open the FASTA file and iterate through to create a list of tuples
+    # containing the sequence name and the sequence itsself
+    with open(filename) as f:
+        for count, line in enumerate(f, start=0):
+            if(count % 2 == 0):
+                # Remove newline from name. Additionally, split on space as
+                # anyhting after the space is not going to be included as the
+                # sequence name (will be used for mirBase.fa)
+                seqName = line.rstrip().split(" ")[0][1:]
+
+            else:
+                # Store the sequence into a variable and add it to
+                # querySeqsList
+                sequence = line.rstrip()
+                sequenceList.append((seqName, sequence))
+
+    return(sequenceList)
+
+def pairwiseAlignmentParallel(queryTuple, subjectSeqsList, organism):
+    """Parallel function to perform a pairwise alignment between a candidate
+    miRNA and each plant miRBase miRNA to identify if the candidate is
+    highly similar to a known miRNA
+
+    Args:
+        queryTuple: A tuples containing the sequence name and the sequence
+            of the candidate miRNAs
+        subjectSeqsList: A list of tuples containing the sequence name and
+            the sequence of the mirBase miRNAs
+        organism: First letter of genus and first 2 letters of species 
+
+    Returns:
+        similarity dicitonary containing the either identical or highly
+        similar miRNA families for each candidate miRNA
+
+    """
+
+    similarityDict = {}
+
+    queryName = queryTuple[0]
+    querySeq = queryTuple[1]
+    identicalFlag = 0
+
+    # Loop through each mirBase miRNA to identify its level of similarity
+    for subjectTuple in subjectSeqsList:
+        subjectName = subjectTuple[0]
+        subjectSeq = subjectTuple[1]
+
+        # Separate the subject organism identifiers from the miRNA
+        # family
+        subjectOrganismIdentifier = subjectName.split('-')[0]
+        mirnaFamily = subjectName.split('-')[1]
+
+        # We don't really care for subsets of a miRNA family, so
+        # remove this if it is present
+        if(not mirnaFamily[-1].isdigit()):
+            counter = -1
+            while(not mirnaFamily[counter].isdigit()):
+                counter -= 1
+                trimmedMirnaFamilyName = mirnaFamily[0:counter+1]
+
+            mirnaFamily = trimmedMirnaFamilyName
+
+        # Perform the alignment between the two sequences. Score 1 poin
+        # for a match, 0 for a mismatch, and -1 for gaps in either
+        # sequence. Only use the best sequence
+        for a in pairwise2.align.globalms(querySeq, subjectSeq, 1, 0,
+                -1, -1, one_alignment_only=True):
+            # Store just the score from the alignment
+            score = a[2]
+
+            # If the length fo the query - score is less than 5, that
+            # suggests there were fewer than 5 total mismatches and thus
+            # the candidate sequence is likely a member of the same family
+            # of the subject sequence
+            if(len(querySeq) - score < 5):
+                # If queryName or mirnaFamily haven't yet been
+                # initialized in similarityDict, initiailize them
+                if(not identicalFlag and queryName not in similarityDict):
+                    similarityDict[queryName] = {}
+                if(not identicalFlag and mirnaFamily not in
+                        similarityDict[queryName]):
+                    similarityDict[queryName][mirnaFamily] = []
+
+                # If the candidate sequence and subject sequences are the
+                # same (and of course the same organism), then set the
+                # the value of the similarityDict just to the miRNA name
+                # and skip the rest of the blast results for this sequence
+                if(querySeq == subjectSeq and organism ==
+                        subjectOrganismIdentifier):
+                    # If the similarity dictionary for this candidate
+                    # miRNA has not been reinitialized as a list, reset
+                    # it entirely to be a list
+                    if(isinstance(similarityDict[queryName], dict)):
+                        similarityDict[queryName] = []
+
+                    similarityDict[queryName].append(subjectName)
+                    # No need to continue with this candidate miRNA, so
+                    # break from the loop to inspect the next candidate
+                    identicalFlag = 1
+
+                # If the exact sequence hasn't been found, add the 
+                # organism identifier to the similarity dictionary for
+                # this miRNA family. Also, skip this case if a tag has
+                # been identified as being identical to this candidate
+                if(not identicalFlag and subjectOrganismIdentifier not in
+                        similarityDict[queryName][mirnaFamily]):
+                    similarityDict[queryName][mirnaFamily].append(
+                            subjectOrganismIdentifier)
+
+    return(similarityDict)
+ 
+def pairwiseAlignment(querySeqsList, subjectSeqsList, organism):
+    """Perform a pairwise alignment between each candidate miRNA and each
+    plant miRBase miRNA to identify if the candidate is highly similar to a
+    known miRNA
+
+    Args:
+        querySeqsList: A list of tuples containing the sequence name and
+            the sequence itself of the candidate miRNAs
+        subjectSeqsList: A list of tuples containing the sequence name and
+            the sequence of the mirBase miRNAs
+        organism: First letter of genus and first 2 letters of species 
+
+    Returns:
+        similarity dicitonary containing the either identical or highly
+        similar miRNA families for each candidate miRNA
+
+    """
+
+    similarityDict = {}
+
+    # Loop through each candidate miRNA 
+    for queryTuple in querySeqsList:
+        queryName = queryTuple[0]
+        querySeq = queryTuple[1]
+        identicalFlag = 0
+
+        # Loop through each mirBase miRNA to identify its level of similarity
+        for subjectTuple in subjectSeqsList:
+            subjectName = subjectTuple[0]
+            subjectSeq = subjectTuple[1]
+
+            # Separate the subject organism identifiers from the miRNA
+            # family
+            subjectOrganismIdentifier = subjectName.split('-')[0]
+            mirnaFamily = subjectName.split('-')[1]
+
+            # We don't really care for subsets of a miRNA family, so
+            # remove this if it is present
+            if(not mirnaFamily[-1].isdigit()):
+                counter = -1
+                while(not mirnaFamily[counter].isdigit()):
+                    counter -= 1
+                    trimmedMirnaFamilyName = mirnaFamily[0:counter+1]
+
+                mirnaFamily = trimmedMirnaFamilyName
+
+            # Perform the alignment between the two sequences. Score 1 poin
+            # for a match, 0 for a mismatch, and -1 for gaps in either
+            # sequence. Only use the best sequence
+            for a in pairwise2.align.globalms(querySeq, subjectSeq, 1, 0,
+                    -1, -1, one_alignment_only=True):
+                # Store just the score from the alignment
+                score = a[2]
+
+                # If the length fo the query - score is less than 5, that
+                # suggests there were fewer than 5 total mismatches and thus
+                # the candidate sequence is likely a member of the same family
+                # of the subject sequence
+                if(len(querySeq) - score < 5):
+                    # If queryName or mirnaFamily haven't yet been
+                    # initialized in similarityDict, initiailize them
+                    if(not identicalFlag and queryName not in similarityDict):
+                        similarityDict[queryName] = {}
+                    if(not identicalFlag and mirnaFamily not in
+                            similarityDict[queryName]):
+                        similarityDict[queryName][mirnaFamily] = []
+
+                    # If the candidate sequence and subject sequences are the
+                    # same (and of course the same organism), then set the
+                    # the value of the similarityDict just to the miRNA name
+                    # and skip the rest of the blast results for this sequence
+                    if(querySeq == subjectSeq and organism ==
+                            subjectOrganismIdentifier):
+                        # If the similarity dictionary for this candidate
+                        # miRNA has not been reinitialized as a list, reset
+                        # it entirely to be a list
+                        if(isinstance(similarityDict[queryName], dict)):
+                            similarityDict[queryName] = []
+
+                        similarityDict[queryName].append(subjectName)
+                        # No need to continue with this candidate miRNA, so
+                        # break from the loop to inspect the next candidate
+                        identicalFlag = 1
+
+                    # If the exact sequence hasn't been found, add the 
+                    # organism identifier to the similarity dictionary for
+                    # this miRNA family. Also, skip this case if a tag has
+                    # been identified as being identical to this candidate
+                    if(not identicalFlag and subjectOrganismIdentifier not in
+                            similarityDict[queryName][mirnaFamily]):
+                        similarityDict[queryName][mirnaFamily].append(
+                            subjectOrganismIdentifier)
+
+    return(similarityDict)
 
 def getFastaDate(filename):
     """Get the date of the input filename creation date

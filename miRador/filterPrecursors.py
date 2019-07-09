@@ -3,8 +3,6 @@ import shutil
 import subprocess
 import sys
 
-from Bio.Seq import Seq
-from Bio.Alphabet import generic_dna
 import log
 
 def writeFilteredPrecursors(filename, chrDict, IRDictByChr,

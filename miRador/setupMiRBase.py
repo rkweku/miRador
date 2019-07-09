@@ -38,14 +38,17 @@ def checkNeedUpdate(version):
     # Loop through the files in this version of miRBase to find the
     # version file
     for filename in filenamesList:
-        if(filename.startswith("0_THIS_IS_RELEASE")):
-            versionFile = filename
+        # First, check if the miRBase plant file even exists yet. If not,
+        # don't bother going any further. We need to update
+        if(os.path.exists("miRBase/miRBasePlantMirnas.fa")):
+            if(filename.startswith("0_THIS_IS_RELEASE")):
+                versionFile = filename
 
-            # If the verson file exists exactly as it was found in miRBase,
-            # return false as we do not need to update our miRBase files
-            if(os.path.exists("miRBase/%s" % filename)):
-                ftp.close()
-                return(False)
+                # If the verson file exists exactly as it was found in miRBase,
+                # return false as we do not need to update our miRBase files
+                if(os.path.exists("miRBase/%s" % filename)):
+                    ftp.close()
+                    return(False)
 
     ftp.close()
 

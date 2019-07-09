@@ -154,6 +154,8 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             shutil.rmtree("%s/images" % outputFolder)
 
         # Delete the various output files if they exist already
+        """
+        # Deprecated
         if(os.path.isfile("%s/blastResults.txt" % outputFolder)):
             os.remove("%s/blastResults.txt" % outputFolder)
         if(os.path.isfile("%s/finalAnnotatedCandidates.csv" % outputFolder)):
@@ -164,6 +166,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
             os.remove("%s/preAnnotatedCandidates.csv" % outputFolder)
         if(os.path.isfile("%s/preAnnotatedCandidates.fa" % outputFolder)):
             os.remove("%s/preAnnotatedCandidates.fa" % outputFolder)
+        """
 
     ###########################################################################
 

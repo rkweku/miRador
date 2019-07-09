@@ -45,20 +45,18 @@ def createSummary(classificationCountsList, outputFolder, runTime):
 
     summaryFilename = "%s/summary.txt" % outputFolder
 
-    f_out = open(summaryFilename, "w")
-
-    f_out.write("Total miRNAs predicted: %s\n" % sum(classificationCountsList))
-    f_out.write("Total known: %s\n" % classificationCountsList[0])
-    f_out.write("Total identical to known miRNAs: %s\n" %\
-        classificationCountsList[1])
-    f_out.write("Total similar to at least one miRNA in this organism: %s\n" %\
-        classificationCountsList[2])
-    f_out.write("Total similar only to miRNAs outside this organism: %s\n" %\
-        classificationCountsList[3])
-    f_out.write("Total novel: %s\n" % classificationCountsList[4])
-    f_out.write("Total runtime was %s seconds" % runTime)
-
-    f_out.close()
+    with open(summaryFilename, "w") as f_out:
+        f_out.write("Total miRNAs predicted: %s\n" % sum(
+            classificationCountsList))
+        f_out.write("Total known: %s\n" % classificationCountsList[0])
+        f_out.write("Total identical to known miRNAs: %s\n" %\
+            classificationCountsList[1])
+        f_out.write("Total similar to at least one miRNA in this "\
+            "organism: %s\n" %classificationCountsList[2])
+        f_out.write("Total similar only to miRNAs outside this "\
+            "organism: %s\n" % classificationCountsList[3])
+        f_out.write("Total novel: %s\n" % classificationCountsList[4])
+        f_out.write("Total runtime was %s seconds" % runTime)
 
 def miRador():
     """Parse configuration file and make necessary calls to the various
@@ -203,7 +201,7 @@ def miRador():
     # Set the number of cores, if parallel is on
     if(parallel):
         nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
-    
+
     # Create genome object
     GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
 
@@ -212,7 +210,6 @@ def miRador():
     ############### Find inverted repeats in genome file #####################
 
     ##########################################################################
-
     # Run EInverted if the flag is set
     if(runEInvertedFlag):
         # Create an empty list for both the inverted repeat FASTA files
@@ -479,7 +476,6 @@ def miRador():
     ################### Annotate candidate miRNAs ############################
 
     ##########################################################################
-    
     logger.info("Annotating candidate miRNAs")
 
     funcStart = time.time()
@@ -488,38 +484,31 @@ def miRador():
     queryMirnasFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
     dbFilename = "miRBase/miRBasePlantMirnas.db"
 
-    # Check to see if the BLAST database needs to be updated
-    updateFlag = annotateCandidates.checkNeedUpdateByDate(
-        subjectSequencesFilename, dbFilename)
+    # Create a list of candidate miRNAs and mirBase miRNAs
+    querySeqsList = annotateCandidates.createListForAlign(queryMirnasFilename)
+    subjectSeqsList = annotateCandidates.createListForAlign(
+        subjectSequencesFilename)
 
-    # Update the blast database if updateFlag is true
-    if(updateFlag):
-        # Create the database from the file holding the subject sequences
-        localStartTime = time.time()
-        dbName = annotateCandidates.createBlastDB(makeblastdbPath, 
-            subjectSequencesFilename, dbFilename)
+    similarityDict = {}
 
-    # BLAST query miRNAs to known miRNAs
-    localStartTime = time.time()
-    logger.info("Performing BLAST")
-    blastFilename = annotateCandidates.blastMirnas(blastnPath, 
-        subjectSequencesFilename, dbFilename, queryMirnasFilename,
-        outputFolder, nthreads)
+    if(parallel):
+        logger.info("Running sequence alignment in parallel")
 
-    # Add field for the subject and query sequences in the BLAST output
-    # because these sequences are not within by default
-    logger.info("Adding sequences to BLAST file")
-    annotateCandidates.addSequencesToOutput(queryMirnasFilename,
-        subjectSequencesFilename, outputFolder)
+        pool = multiprocessing.Pool(nproc)
 
-    # Read the BLAST results into a dictionary for quick querying
-    blastDict = annotateCandidates.readBlastResults(blastFilename)
+        res = pool.starmap_async(annotateCandidates.pairwiseAlignmentParallel,
+            zip(querySeqsList, repeat(subjectSeqsList), repeat(organism)))
 
-    # Create a dictionary of either the known miRNAs that the candidate
-    # miRNAs are equal to, or the miRNA families and species that the
-    # candidate miRNA is highly similar to
-    similarityDict = annotateCandidates.createSimilarityDict(blastDict,
-        organism)
+        results = res.get()
+
+        pool.close()
+
+        for result in results:
+            similarityDict.update(result)
+
+    else:
+        similarityDict = annotateCandidates.pairwiseAlignment(querySeqsList,
+            subjectSeqsList, organism)
 
     # Properly annotate the candidate miRNAs with the data in similarityDict
     classificationCountsList = annotateCandidates.annotateCandidates(
@@ -550,5 +539,5 @@ def miRador():
     # If cleanup flag is set, remove the temp folder containing bowtie
     # output data as well as potential temp fasta files created when 
     # a user input tag count files
-    if(cleanupFlag):
-        shutil.rmtree("miRadorTempFolder")
+#    if(cleanupFlag):
+#        shutil.rmtree("miRadorTempFolder")

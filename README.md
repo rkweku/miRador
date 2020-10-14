@@ -20,6 +20,8 @@ There are several dependencies of miRador, all of which are checked prior to run
 
 `ViennaRNA`: https://www.tbi.univie.ac.at/RNA/#download
 
+`EMBOSS(einverted)`: ftp://emboss.open-bio.org/pub/EMBOSS/EMBOSS-6.5.7.tar.gz
+
 ### Python3 packages
 `PyPDF2`: https://pypi.org/project/PyPDF2/
 

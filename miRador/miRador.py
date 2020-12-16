@@ -165,7 +165,7 @@ def miRador():
         sys.exit()
 
     # Grab the information for the BLAST variables
-    organism = config.get("miRBase", "organism")
+    organism = config.get("miRBase", "organism").lower()
     version = config.get("miRBase", "version", fallback = "CURRENT")
 
     cleanupFlag = config.getint("General", "cleanupFlag", fallback = 1)

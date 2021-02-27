@@ -877,6 +877,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
         libCount = 0
         identicalFlag = False
         similarFlag = False
+        newMemberFlag = False
         validatedFlag = False
 
         # Check if the candidate miRNA name is in the similarityDict
@@ -940,9 +941,10 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                         # Only add this flag to the summary list if 
                         # hasn't been worked with already (because these
                         # can hit more than 1 known miRNA)
-                        if(not similarFlag):
+                        if(not similarFlag or not newMemberFlag):
                             classificationCountsList[2] += 1
                         similarFlag = True
+                        newMemberFlag = True
                         line.insert(endIterIndex, "New member of existing "\
                             "family")
                         line.insert(endIterIndex + 1, " %s-%s-like" %\
@@ -958,12 +960,6 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                             if(float(line[i])):
                                 libCount += 1
                         if(libCount > 1 and libCount > float(numLibs * .1)):
-                            # Only add this flag to the summary list if 
-                            # hasn't been worked with already (because these
-                            # can hit more than 1 known miRNA)
-                            if(not similarFlag):
-                                classificationCountsList[3] += 1
-
                             similarFlag = True
                             line.append("Conserved family of the following:")
                             line.append(mirFamily)
@@ -998,6 +994,11 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
                     # as a true candidate
                     validatedFlag = True
 
+                    # If similar flag was true, but the newMemberFlag was not
+                    # set, then increment the conserved family count by 1
+                    if(not newMemberFlag):
+                        classificationCountsList[3] += 1
+
         # If the candidate miRNA had no similar sequence, it is completely
         # novel by our tests and thus requires validation in more than one
         # library. Thus, here we will literate through the results and
@@ -1012,7 +1013,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
             # If the number of libraries this miRNA was predicted in is
             # greater than 1 as well as greater than 10% of the given
             # libraries, then we will confirm the replication requirement
-            if(libCount > 1 and libCount > float(numLibs * .1)):
+            if(True):#libCount > 1 and libCount > float(numLibs * .1)):
                 line.append("Novel")
                 classificationCountsList[4] += 1
 

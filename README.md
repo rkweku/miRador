@@ -62,6 +62,14 @@ Running miRador requires modifying a configuration file, initially named `miRado
 |ps2pdfwrPath             |        |Path of ps2pdfwr                                                                              |
 |outputFolder             |        |Name of specific folder to write data to. *If folder exists, data within will be overwritten* |
 
+## Bowtie
+Bowtie has been configured to be run with the following arguments. While these can be changed, there is no simple option to do so within the ini file and thus changes would need to be done within library.py. With that said, the specific options are as follows:
+- -a to report all valid alignments as we want multihits to the genome. We expect few multi-matches to the genome
+- --best and --strata ensures only the best alignments are reported and so that less optimum but passable alignments do not appear
+- -v 0 Allow no mismatch
+- --sam-nohead removes the header from the SAM file. This is useful because we have to merge the fragment alignments for parallel runs
+- --no-unal suppresses sequences with no alignemnt. This helps to keep the map file manageable and filter out these sequences earlier for efficiency
+
 ## Examples
 When all options in the configuration file are set, running miRador is quite simple. From the miRador base directory, type:
 ```

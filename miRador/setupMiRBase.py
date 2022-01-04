@@ -284,7 +284,7 @@ def setupMiRBase(organism, version):
     # Initialize our logger
     logger = log.setupLogger("setupMirBase")
 
-    updateStatus = checkNeedUpdate(version)
+    updateStatus = True #checkNeedUpdate(version)
     gffFilename = "miRBase/%s.gff3" % organism
     mirBaseDict = {}
 

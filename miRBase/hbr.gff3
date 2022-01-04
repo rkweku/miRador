@@ -1,0 +1,57 @@
+##gff-version 3
+##date 2018-3-5
+#
+# Chromosomal coordinates of Hevea brasiliensis microRNAs
+# microRNAs:               miRBase v22
+# genome-build-id:         Hevbra_1.0
+# genome-build-accession:  NCBI_Assembly:GCA_000340545.1
+#
+# Hairpin precursor sequences have type "miRNA_primary_transcript". 
+# Note, these sequences do not represent the full primary transcript, 
+# rather a predicted stem-loop portion that includes the precursor 
+# miRNA. Mature sequences have type "miRNA".
+#
+AJJZ010268839.1	.	miRNA_primary_transcript	1042	1181	.	-	.	ID=MI0021474;Alias=MI0021474;Name=hbr-MIR2118
+AJJZ010268839.1	.	miRNA	1121	1141	.	-	.	ID=MIMAT0024784;Alias=MIMAT0024784;Name=hbr-miR2118;Derives_from=MI0021474
+AJJZ010271831.1	.	miRNA_primary_transcript	3159	3285	.	-	.	ID=MI0022054;Alias=MI0022054;Name=hbr-MIR166a
+AJJZ010271831.1	.	miRNA	3177	3195	.	-	.	ID=MIMAT0025284;Alias=MIMAT0025284;Name=hbr-miR166a;Derives_from=MI0022054
+AJJZ010297913.1	.	miRNA_primary_transcript	154	310	.	+	.	ID=MI0021478;Alias=MI0021478;Name=hbr-MIR6169
+AJJZ010297913.1	.	miRNA	173	193	.	+	.	ID=MIMAT0024788;Alias=MIMAT0024788;Name=hbr-miR6169;Derives_from=MI0021478
+AJJZ010312785.1	.	miRNA_primary_transcript	188	306	.	+	.	ID=MI0022052;Alias=MI0022052;Name=hbr-MIR156
+AJJZ010312785.1	.	miRNA	208	226	.	+	.	ID=MIMAT0025282;Alias=MIMAT0025282;Name=hbr-miR156;Derives_from=MI0022052
+AJJZ010325568.1	.	miRNA_primary_transcript	1778	1897	.	+	.	ID=MI0022055;Alias=MI0022055;Name=hbr-MIR166b
+AJJZ010325568.1	.	miRNA	1857	1878	.	+	.	ID=MIMAT0025285;Alias=MIMAT0025285;Name=hbr-miR166b;Derives_from=MI0022055
+AJJZ010379917.1	.	miRNA_primary_transcript	682	797	.	-	.	ID=MI0028935;Alias=MI0028935;Name=hbr-MIR9386
+AJJZ010379917.1	.	miRNA	756	777	.	-	.	ID=MIMAT0035235;Alias=MIMAT0035235;Name=hbr-miR9386;Derives_from=MI0028935
+AJJZ010428717.1	.	miRNA_primary_transcript	484	622	.	-	.	ID=MI0021479;Alias=MI0021479;Name=hbr-MIR6170
+AJJZ010428717.1	.	miRNA	523	543	.	-	.	ID=MIMAT0024789;Alias=MIMAT0024789;Name=hbr-miR6170;Derives_from=MI0021479
+AJJZ010461223.1	.	miRNA_primary_transcript	797	882	.	-	.	ID=MI0021481;Alias=MI0021481;Name=hbr-MIR396a
+AJJZ010461223.1	.	miRNA	862	882	.	-	.	ID=MIMAT0024791;Alias=MIMAT0024791;Name=hbr-miR396a;Derives_from=MI0021481
+AJJZ010669823.1	.	miRNA_primary_transcript	166	284	.	+	.	ID=MI0022062;Alias=MI0022062;Name=hbr-MIR6483
+AJJZ010669823.1	.	miRNA	252	273	.	+	.	ID=MIMAT0025292;Alias=MIMAT0025292;Name=hbr-miR6483;Derives_from=MI0022062
+AJJZ010735981.1	.	miRNA_primary_transcript	42	181	.	-	.	ID=MI0021482;Alias=MI0021482;Name=hbr-MIR6172
+AJJZ010735981.1	.	miRNA	45	65	.	-	.	ID=MIMAT0024792;Alias=MIMAT0024792;Name=hbr-miR6172;Derives_from=MI0021482
+KB611725.1	.	miRNA_primary_transcript	49879	50004	.	-	.	ID=MI0022060;Alias=MI0022060;Name=hbr-MIR476
+KB611725.1	.	miRNA	49965	49984	.	-	.	ID=MIMAT0025290;Alias=MIMAT0025290;Name=hbr-miR476;Derives_from=MI0022060
+KB612549.1	.	miRNA_primary_transcript	2793	2953	.	-	.	ID=MI0021480;Alias=MI0021480;Name=hbr-MIR6171
+KB612549.1	.	miRNA	2812	2832	.	-	.	ID=MIMAT0024790;Alias=MIMAT0024790;Name=hbr-miR6171;Derives_from=MI0021480
+KB615850.1	.	miRNA_primary_transcript	59266	59405	.	-	.	ID=MI0021484;Alias=MI0021484;Name=hbr-MIR398
+KB615850.1	.	miRNA	59369	59389	.	-	.	ID=MIMAT0024794;Alias=MIMAT0024794;Name=hbr-miR398;Derives_from=MI0021484
+KB616898.1	.	miRNA_primary_transcript	70551	70678	.	-	.	ID=MI0022058;Alias=MI0022058;Name=hbr-MIR408a
+KB616898.1	.	miRNA	70637	70658	.	-	.	ID=MIMAT0025288;Alias=MIMAT0025288;Name=hbr-miR408a;Derives_from=MI0022058
+KB617227.1	.	miRNA_primary_transcript	192559	192671	.	-	.	ID=MI0021477;Alias=MI0021477;Name=hbr-MIR482a
+KB617227.1	.	miRNA	192631	192652	.	-	.	ID=MIMAT0024787;Alias=MIMAT0024787;Name=hbr-miR482a;Derives_from=MI0021477
+KB617427.1	.	miRNA_primary_transcript	38053	38273	.	+	.	ID=MI0022053;Alias=MI0022053;Name=hbr-MIR159a
+KB617427.1	.	miRNA	38237	38257	.	+	.	ID=MIMAT0025283;Alias=MIMAT0025283;Name=hbr-miR159a;Derives_from=MI0022053
+KB618810.1	.	miRNA_primary_transcript	123286	123350	.	-	.	ID=MI0021473;Alias=MI0021473;Name=hbr-MIR6166
+KB618810.1	.	miRNA	123326	123348	.	-	.	ID=MIMAT0024783;Alias=MIMAT0024783;Name=hbr-miR6166;Derives_from=MI0021473
+KB619586.1	.	miRNA_primary_transcript	11552	11701	.	-	.	ID=MI0028937;Alias=MI0028937;Name=hbr-MIR482b
+KB619586.1	.	miRNA	11661	11681	.	-	.	ID=MIMAT0035237;Alias=MIMAT0035237;Name=hbr-miR482b;Derives_from=MI0028937
+KB620083.1	.	miRNA_primary_transcript	42672	42812	.	-	.	ID=MI0021486;Alias=MI0021486;Name=hbr-MIR6175
+KB620083.1	.	miRNA	42691	42711	.	-	.	ID=MIMAT0024796;Alias=MIMAT0024796;Name=hbr-miR6175;Derives_from=MI0021486
+KB620950.1	.	miRNA_primary_transcript	72023	72142	.	+	.	ID=MI0022059;Alias=MI0022059;Name=hbr-MIR408b
+KB620950.1	.	miRNA	72043	72064	.	+	.	ID=MIMAT0025289;Alias=MIMAT0025289;Name=hbr-miR408b;Derives_from=MI0022059
+KB622489.1	.	miRNA_primary_transcript	62864	63017	.	+	.	ID=MI0022057;Alias=MI0022057;Name=hbr-MIR396b
+KB622489.1	.	miRNA	62882	62902	.	+	.	ID=MIMAT0025287;Alias=MIMAT0025287;Name=hbr-miR396b;Derives_from=MI0022057
+KB629150.1	.	miRNA_primary_transcript	30162	30382	.	+	.	ID=MI0022056;Alias=MI0022056;Name=hbr-MIR319
+KB629150.1	.	miRNA	30343	30363	.	+	.	ID=MIMAT0025286;Alias=MIMAT0025286;Name=hbr-miR319;Derives_from=MI0022056

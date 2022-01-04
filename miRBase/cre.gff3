@@ -1,0 +1,110 @@
+##gff-version 3
+##date 2018-3-5
+#
+# Chromosomal coordinates of Chlamydomonas reinhardtii microRNAs
+# microRNAs:               miRBase v22
+# genome-build-id:         CHLRE3.1
+#
+# Hairpin precursor sequences have type "miRNA_primary_transcript". 
+# Note, these sequences do not represent the full primary transcript, 
+# rather a predicted stem-loop portion that includes the precursor 
+# miRNA. Mature sequences have type "miRNA".
+#
+scaffold_1	.	miRNA_primary_transcript	186394	186537	.	+	.	ID=MI0005699;Alias=MI0005699;Name=cre-MIR906
+scaffold_1	.	miRNA	186404	186424	.	+	.	ID=MIMAT0004387;Alias=MIMAT0004387;Name=cre-miR906-5p;Derives_from=MI0005699
+scaffold_1	.	miRNA	186488	186508	.	+	.	ID=MIMAT0004388;Alias=MIMAT0004388;Name=cre-miR906-3p;Derives_from=MI0005699
+scaffold_1	.	miRNA_primary_transcript	5256729	5256842	.	+	.	ID=MI0006210;Alias=MI0006210;Name=cre-MIR1149
+scaffold_1	.	miRNA	5256751	5256772	.	+	.	ID=MIMAT0005388;Alias=MIMAT0005388;Name=cre-miR1149.1;Derives_from=MI0006210
+scaffold_1	.	miRNA	5256811	5256831	.	+	.	ID=MIMAT0005389;Alias=MIMAT0005389;Name=cre-miR1149.2;Derives_from=MI0006210
+scaffold_10	.	miRNA_primary_transcript	1416466	1417010	.	+	.	ID=MI0005710;Alias=MI0005710;Name=cre-MIR917
+scaffold_10	.	miRNA	1416668	1416687	.	+	.	ID=MIMAT0004404;Alias=MIMAT0004404;Name=cre-miR917;Derives_from=MI0005710
+scaffold_10	.	miRNA_primary_transcript	1711645	1712042	.	+	.	ID=MI0006211;Alias=MI0006211;Name=cre-MIR1150
+scaffold_10	.	miRNA	1711939	1711959	.	+	.	ID=MIMAT0005390;Alias=MIMAT0005390;Name=cre-miR1150.3;Derives_from=MI0006211
+scaffold_10	.	miRNA	1711975	1711994	.	+	.	ID=MIMAT0005391;Alias=MIMAT0005391;Name=cre-miR1150.2;Derives_from=MI0006211
+scaffold_10	.	miRNA	1711981	1712001	.	+	.	ID=MIMAT0005392;Alias=MIMAT0005392;Name=cre-miR1150.1;Derives_from=MI0006211
+scaffold_10	.	miRNA_primary_transcript	1934033	1934142	.	+	.	ID=MI0006212;Alias=MI0006212;Name=cre-MIR1151a
+scaffold_10	.	miRNA	1934046	1934066	.	+	.	ID=MIMAT0005393;Alias=MIMAT0005393;Name=cre-miR1151a-5p;Derives_from=MI0006212
+scaffold_10	.	miRNA	1934111	1934128	.	+	.	ID=MIMAT0005394;Alias=MIMAT0005394;Name=cre-miR1151a-3p;Derives_from=MI0006212
+scaffold_10	.	miRNA_primary_transcript	1935781	1935924	.	+	.	ID=MI0006213;Alias=MI0006213;Name=cre-MIR1151b
+scaffold_10	.	miRNA	1935811	1935831	.	+	.	ID=MIMAT0005395;Alias=MIMAT0005395;Name=cre-miR1151b-5p;Derives_from=MI0006213
+scaffold_10	.	miRNA	1935876	1935895	.	+	.	ID=MIMAT0005396;Alias=MIMAT0005396;Name=cre-miR1151b-3p;Derives_from=MI0006213
+scaffold_10	.	miRNA_primary_transcript	2068926	2069014	.	-	.	ID=MI0006234;Alias=MI0006234;Name=cre-MIR1167
+scaffold_10	.	miRNA	2068928	2068947	.	-	.	ID=MIMAT0005434;Alias=MIMAT0005434;Name=cre-miR1167;Derives_from=MI0006234
+scaffold_12	.	miRNA_primary_transcript	1998777	1998906	.	+	.	ID=MI0006214;Alias=MI0006214;Name=cre-MIR1152
+scaffold_12	.	miRNA	1998867	1998887	.	+	.	ID=MIMAT0005397;Alias=MIMAT0005397;Name=cre-miR1152;Derives_from=MI0006214
+scaffold_15	.	miRNA_primary_transcript	1291877	1292010	.	+	.	ID=MI0006215;Alias=MI0006215;Name=cre-MIR1153
+scaffold_15	.	miRNA	1291881	1291902	.	+	.	ID=MIMAT0005398;Alias=MIMAT0005398;Name=cre-miR1153-5p.1;Derives_from=MI0006215
+scaffold_15	.	miRNA	1291901	1291921	.	+	.	ID=MIMAT0005399;Alias=MIMAT0005399;Name=cre-miR1153-5p.2;Derives_from=MI0006215
+scaffold_15	.	miRNA	1291967	1291988	.	+	.	ID=MIMAT0005400;Alias=MIMAT0005400;Name=cre-miR1153-3p.2;Derives_from=MI0006215
+scaffold_15	.	miRNA	1291987	1292005	.	+	.	ID=MIMAT0005401;Alias=MIMAT0005401;Name=cre-miR1153-3p.1;Derives_from=MI0006215
+scaffold_15	.	miRNA_primary_transcript	1918568	1918688	.	-	.	ID=MI0006216;Alias=MI0006216;Name=cre-MIR1154
+scaffold_15	.	miRNA	1918649	1918668	.	-	.	ID=MIMAT0005402;Alias=MIMAT0005402;Name=cre-miR1154-5p;Derives_from=MI0006216
+scaffold_15	.	miRNA	1918588	1918606	.	-	.	ID=MIMAT0005403;Alias=MIMAT0005403;Name=cre-miR1154-3p;Derives_from=MI0006216
+scaffold_15	.	miRNA_primary_transcript	2058507	2058606	.	+	.	ID=MI0006217;Alias=MI0006217;Name=cre-MIR1155
+scaffold_15	.	miRNA	2058581	2058602	.	+	.	ID=MIMAT0005404;Alias=MIMAT0005404;Name=cre-miR1155;Derives_from=MI0006217
+scaffold_16	.	miRNA_primary_transcript	1919702	1919968	.	+	.	ID=MI0006218;Alias=MI0006218;Name=cre-MIR1156
+scaffold_16	.	miRNA	1919897	1919917	.	+	.	ID=MIMAT0005405;Alias=MIMAT0005405;Name=cre-miR1156.1;Derives_from=MI0006218
+scaffold_16	.	miRNA	1919942	1919962	.	+	.	ID=MIMAT0005406;Alias=MIMAT0005406;Name=cre-miR1156.2;Derives_from=MI0006218
+scaffold_17	.	miRNA_primary_transcript	966108	966334	.	+	.	ID=MI0005703;Alias=MI0005703;Name=cre-MIR910
+scaffold_17	.	miRNA	966241	966261	.	+	.	ID=MIMAT0004393;Alias=MIMAT0004393;Name=cre-miR910;Derives_from=MI0005703
+scaffold_18	.	miRNA_primary_transcript	251268	251404	.	+	.	ID=MI0006219;Alias=MI0006219;Name=cre-MIR1157
+scaffold_18	.	miRNA	251297	251318	.	+	.	ID=MIMAT0005407;Alias=MIMAT0005407;Name=cre-miR1157-5p;Derives_from=MI0006219
+scaffold_18	.	miRNA	251359	251379	.	+	.	ID=MIMAT0005408;Alias=MIMAT0005408;Name=cre-miR1157-3p;Derives_from=MI0006219
+scaffold_213	.	miRNA_primary_transcript	20092	20321	.	+	.	ID=MI0005701;Alias=MI0005701;Name=cre-MIR908
+scaffold_213	.	miRNA	20100	20121	.	+	.	ID=MIMAT0004965;Alias=MIMAT0004965;Name=cre-miR908.1;Derives_from=MI0005701
+scaffold_213	.	miRNA	20162	20183	.	+	.	ID=MIMAT0004390;Alias=MIMAT0004390;Name=cre-miR908.2;Derives_from=MI0005701
+scaffold_213	.	miRNA	20252	20270	.	+	.	ID=MIMAT0004966;Alias=MIMAT0004966;Name=cre-miR908.3;Derives_from=MI0005701
+scaffold_23	.	miRNA_primary_transcript	1270775	1271060	.	-	.	ID=MI0005708;Alias=MI0005708;Name=cre-MIR915
+scaffold_23	.	miRNA	1270932	1270952	.	-	.	ID=MIMAT0004398;Alias=MIMAT0004398;Name=cre-miR915;Derives_from=MI0005708
+scaffold_26	.	miRNA_primary_transcript	727941	728377	.	-	.	ID=MI0006221;Alias=MI0006221;Name=cre-MIR1160
+scaffold_26	.	miRNA	728242	728262	.	-	.	ID=MIMAT0005410;Alias=MIMAT0005410;Name=cre-miR1160.2;Derives_from=MI0006221
+scaffold_26	.	miRNA	728027	728046	.	-	.	ID=MIMAT0005411;Alias=MIMAT0005411;Name=cre-miR1160.1;Derives_from=MI0006221
+scaffold_26	.	miRNA	727985	728005	.	-	.	ID=MIMAT0005412;Alias=MIMAT0005412;Name=cre-miR1160.3;Derives_from=MI0006221
+scaffold_270	.	miRNA_primary_transcript	3447	3537	.	-	.	ID=MI0006222;Alias=MI0006222;Name=cre-MIR1161a
+scaffold_270	.	miRNA	3462	3480	.	-	.	ID=MIMAT0005413;Alias=MIMAT0005413;Name=cre-miR1161a;Derives_from=MI0006222
+scaffold_3	.	miRNA_primary_transcript	167785	167927	.	-	.	ID=MI0006223;Alias=MI0006223;Name=cre-MIR1162
+scaffold_3	.	miRNA	167879	167900	.	-	.	ID=MIMAT0005415;Alias=MIMAT0005415;Name=cre-miR1162-5p;Derives_from=MI0006223
+scaffold_3	.	miRNA	167812	167833	.	-	.	ID=MIMAT0005416;Alias=MIMAT0005416;Name=cre-miR1162-3p;Derives_from=MI0006223
+scaffold_31	.	miRNA_primary_transcript	330020	330419	.	+	.	ID=MI0006224;Alias=MI0006224;Name=cre-MIR1163
+scaffold_31	.	miRNA	330120	330140	.	+	.	ID=MIMAT0005417;Alias=MIMAT0005417;Name=cre-miR1163.2;Derives_from=MI0006224
+scaffold_31	.	miRNA	330292	330312	.	+	.	ID=MIMAT0005418;Alias=MIMAT0005418;Name=cre-miR1163.1;Derives_from=MI0006224
+scaffold_32	.	miRNA_primary_transcript	259603	259766	.	+	.	ID=MI0006225;Alias=MI0006225;Name=cre-MIR1164
+scaffold_32	.	miRNA	259613	259633	.	+	.	ID=MIMAT0005419;Alias=MIMAT0005419;Name=cre-miR1164;Derives_from=MI0006225
+scaffold_35	.	miRNA_primary_transcript	929764	930115	.	-	.	ID=MI0005705;Alias=MI0005705;Name=cre-MIR912
+scaffold_35	.	miRNA	929881	929900	.	-	.	ID=MIMAT0004395;Alias=MIMAT0004395;Name=cre-miR912;Derives_from=MI0005705
+scaffold_36	.	miRNA_primary_transcript	577911	578282	.	-	.	ID=MI0006227;Alias=MI0006227;Name=cre-MIR1166
+scaffold_36	.	miRNA	578140	578160	.	-	.	ID=MIMAT0005422;Alias=MIMAT0005422;Name=cre-miR1166.1;Derives_from=MI0006227
+scaffold_36	.	miRNA	578025	578043	.	-	.	ID=MIMAT0005423;Alias=MIMAT0005423;Name=cre-miR1166.2;Derives_from=MI0006227
+scaffold_40	.	miRNA_primary_transcript	432487	432679	.	-	.	ID=MI0006228;Alias=MI0006228;Name=cre-MIR1168
+scaffold_40	.	miRNA	432546	432566	.	-	.	ID=MIMAT0005424;Alias=MIMAT0005424;Name=cre-miR1168.1;Derives_from=MI0006228
+scaffold_40	.	miRNA	432529	432545	.	-	.	ID=MIMAT0005425;Alias=MIMAT0005425;Name=cre-miR1168.2;Derives_from=MI0006228
+scaffold_46	.	miRNA_primary_transcript	613349	613444	.	+	.	ID=MI0006229;Alias=MI0006229;Name=cre-MIR1169
+scaffold_46	.	miRNA	613354	613375	.	+	.	ID=MIMAT0005426;Alias=MIMAT0005426;Name=cre-miR1169-5p;Derives_from=MI0006229
+scaffold_46	.	miRNA	613418	613438	.	+	.	ID=MIMAT0005427;Alias=MIMAT0005427;Name=cre-miR1169-3p;Derives_from=MI0006229
+scaffold_5	.	miRNA_primary_transcript	4560	4725	.	+	.	ID=MI0006230;Alias=MI0006230;Name=cre-MIR1170
+scaffold_5	.	miRNA	4661	4680	.	+	.	ID=MIMAT0005428;Alias=MIMAT0005428;Name=cre-miR1170.2;Derives_from=MI0006230
+scaffold_5	.	miRNA	4688	4708	.	+	.	ID=MIMAT0005429;Alias=MIMAT0005429;Name=cre-miR1170.1;Derives_from=MI0006230
+scaffold_51	.	miRNA_primary_transcript	419396	419582	.	-	.	ID=MI0006231;Alias=MI0006231;Name=cre-MIR1171
+scaffold_51	.	miRNA	419545	419567	.	-	.	ID=MIMAT0005430;Alias=MIMAT0005430;Name=cre-miR1171;Derives_from=MI0006231
+scaffold_6	.	miRNA_primary_transcript	118495	118743	.	-	.	ID=MI0005706;Alias=MI0005706;Name=cre-MIR913
+scaffold_6	.	miRNA	118663	118683	.	-	.	ID=MIMAT0004968;Alias=MIMAT0004968;Name=cre-miR913-5p;Derives_from=MI0005706
+scaffold_6	.	miRNA	118553	118573	.	-	.	ID=MIMAT0004396;Alias=MIMAT0004396;Name=cre-miR913-3p;Derives_from=MI0005706
+scaffold_6	.	miRNA_primary_transcript	1014118	1014386	.	+	.	ID=MI0005697;Alias=MI0005697;Name=cre-MIR918
+scaffold_6	.	miRNA	1014274	1014294	.	+	.	ID=MIMAT0004385;Alias=MIMAT0004385;Name=cre-miR918;Derives_from=MI0005697
+scaffold_6	.	miRNA_primary_transcript	1014120	1014384	.	-	.	ID=MI0005709;Alias=MI0005709;Name=cre-MIR919
+scaffold_6	.	miRNA	1014338	1014358	.	-	.	ID=MIMAT0004399;Alias=MIMAT0004399;Name=cre-miR919.2;Derives_from=MI0005709
+scaffold_6	.	miRNA	1014188	1014208	.	-	.	ID=MIMAT0004969;Alias=MIMAT0004969;Name=cre-miR919.1;Derives_from=MI0005709
+scaffold_6	.	miRNA_primary_transcript	1969701	1970232	.	+	.	ID=MI0006232;Alias=MI0006232;Name=cre-MIR1173
+scaffold_6	.	miRNA	1969876	1969896	.	+	.	ID=MIMAT0005431;Alias=MIMAT0005431;Name=cre-miR1173;Derives_from=MI0006232
+scaffold_6	.	miRNA_primary_transcript	2839823	2840716	.	+	.	ID=MI0005707;Alias=MI0005707;Name=cre-MIR914
+scaffold_6	.	miRNA	2840383	2840403	.	+	.	ID=MIMAT0004397;Alias=MIMAT0004397;Name=cre-miR914;Derives_from=MI0005707
+scaffold_60	.	miRNA_primary_transcript	450945	451035	.	+	.	ID=MI0015964;Alias=MI0015964;Name=cre-MIR1161b
+scaffold_60	.	miRNA	451002	451020	.	+	.	ID=MIMAT0018505;Alias=MIMAT0018505;Name=cre-miR1161b;Derives_from=MI0015964
+scaffold_7	.	miRNA_primary_transcript	773096	773178	.	-	.	ID=MI0005704;Alias=MI0005704;Name=cre-MIR911
+scaffold_7	.	miRNA	773096	773116	.	-	.	ID=MIMAT0004394;Alias=MIMAT0004394;Name=cre-miR911;Derives_from=MI0005704
+scaffold_75	.	miRNA_primary_transcript	370850	371142	.	+	.	ID=MI0005698;Alias=MI0005698;Name=cre-MIR905
+scaffold_75	.	miRNA	370887	370906	.	+	.	ID=MIMAT0004964;Alias=MIMAT0004964;Name=cre-miR905-5p;Derives_from=MI0005698
+scaffold_75	.	miRNA	371084	371104	.	+	.	ID=MIMAT0004386;Alias=MIMAT0004386;Name=cre-miR905-3p;Derives_from=MI0005698
+scaffold_76	.	miRNA_primary_transcript	233228	233363	.	+	.	ID=MI0006233;Alias=MI0006233;Name=cre-MIR1172
+scaffold_76	.	miRNA	233231	233251	.	+	.	ID=MIMAT0005432;Alias=MIMAT0005432;Name=cre-miR1172.2;Derives_from=MI0006233
+scaffold_76	.	miRNA	233318	233339	.	+	.	ID=MIMAT0005433;Alias=MIMAT0005433;Name=cre-miR1172.1;Derives_from=MI0006233

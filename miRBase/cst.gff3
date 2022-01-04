@@ -1,0 +1,23 @@
+##gff-version 3
+##date 2018-3-5
+#
+# Chromosomal coordinates of Cucumis sativus microRNAs
+# microRNAs:               miRBase v22
+# genome-build-id:         ASM407v2
+# genome-build-accession:  NCBI_Assembly:GCA_000004075.2
+#
+# Hairpin precursor sequences have type "miRNA_primary_transcript". 
+# Note, these sequences do not represent the full primary transcript, 
+# rather a predicted stem-loop portion that includes the precursor 
+# miRNA. Mature sequences have type "miRNA".
+#
+CM002922.1	.	miRNA_primary_transcript	14602554	14602699	.	-	.	ID=MI0036484;Alias=MI0036484;Name=cst-MIR11333
+CM002922.1	.	miRNA	14602673	14602698	.	-	.	ID=MIMAT0044623;Alias=MIMAT0044623;Name=cst-miR11333;Derives_from=MI0036484
+CM002924.1	.	miRNA_primary_transcript	620749	620867	.	+	.	ID=MI0036485;Alias=MI0036485;Name=cst-MIR11334
+CM002924.1	.	miRNA	620772	620796	.	+	.	ID=MIMAT0044624;Alias=MIMAT0044624;Name=cst-miR11334;Derives_from=MI0036485
+CM002924.1	.	miRNA_primary_transcript	18772568	18772646	.	+	.	ID=MI0036486;Alias=MI0036486;Name=cst-MIR11335
+CM002924.1	.	miRNA	18772626	18772645	.	+	.	ID=MIMAT0044625;Alias=MIMAT0044625;Name=cst-miR11335;Derives_from=MI0036486
+CM002927.1	.	miRNA_primary_transcript	4355007	4355114	.	-	.	ID=MI0036482;Alias=MI0036482;Name=cst-MIR11331
+CM002927.1	.	miRNA	4355016	4355038	.	-	.	ID=MIMAT0044621;Alias=MIMAT0044621;Name=cst-miR11331;Derives_from=MI0036482
+CM002927.1	.	miRNA_primary_transcript	18576474	18576560	.	+	.	ID=MI0036483;Alias=MI0036483;Name=cst-MIR11332
+CM002927.1	.	miRNA	18576527	18576554	.	+	.	ID=MIMAT0044622;Alias=MIMAT0044622;Name=cst-miR11332;Derives_from=MI0036483

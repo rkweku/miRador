@@ -1,0 +1,17 @@
+##gff-version 3
+##date 2018-3-5
+#
+# Chromosomal coordinates of Hordeum vulgare microRNAs
+# microRNAs:               miRBase v22
+# genome-build-id:         Hvul_cvHarunaNijo3HBAC01
+# genome-build-accession:  NCBI_Assembly:GCA_000227425.1
+#
+# Hairpin precursor sequences have type "miRNA_primary_transcript". 
+# Note, these sequences do not represent the full primary transcript, 
+# rather a predicted stem-loop portion that includes the precursor 
+# miRNA. Mature sequences have type "miRNA".
+#
+BACC01000259.1	.	miRNA_primary_transcript	1889	2066	.	+	.	ID=MI0016452;Alias=MI0016452;Name=hvu-MIR159a
+BACC01000259.1	.	miRNA	2044	2064	.	+	.	ID=MIMAT0018210;Alias=MIMAT0018210;Name=hvu-miR159a;Derives_from=MI0016452
+BACC01005699.1	.	miRNA_primary_transcript	5031	5126	.	-	.	ID=MI0021503;Alias=MI0021503;Name=hvu-MIR5049d
+BACC01005699.1	.	miRNA	5041	5061	.	-	.	ID=MIMAT0024813;Alias=MIMAT0024813;Name=hvu-miR5049d;Derives_from=MI0021503

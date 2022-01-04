@@ -1,0 +1,31 @@
+##gff-version 3
+##date 2018-3-5
+#
+# Chromosomal coordinates of Phaseolus vulgaris microRNAs
+# microRNAs:               miRBase v22
+# genome-build-id:         PhaVulg1_0
+# genome-build-accession:  NCBI_Assembly:GCA_000499845.1
+#
+# Hairpin precursor sequences have type "miRNA_primary_transcript". 
+# Note, these sequences do not represent the full primary transcript, 
+# rather a predicted stem-loop portion that includes the precursor 
+# miRNA. Mature sequences have type "miRNA".
+#
+chr2	.	miRNA_primary_transcript	8674179	8674326	.	+	.	ID=MI0010703;Alias=MI0010703;Name=pvu-MIR2119
+chr2	.	miRNA	8674306	8674326	.	+	.	ID=MIMAT0011174;Alias=MIMAT0011174;Name=pvu-miR2119;Derives_from=MI0010703
+chr2	.	miRNA_primary_transcript	44066654	44066817	.	-	.	ID=MI0010704;Alias=MI0010704;Name=pvu-MIR166a
+chr2	.	miRNA	44066673	44066693	.	-	.	ID=MIMAT0011175;Alias=MIMAT0011175;Name=pvu-miR166a;Derives_from=MI0010704
+chr3	.	miRNA_primary_transcript	23530620	23530821	.	+	.	ID=MI0010701;Alias=MI0010701;Name=pvu-MIR1514a
+chr3	.	miRNA	23530684	23530705	.	+	.	ID=MIMAT0011171;Alias=MIMAT0011171;Name=pvu-miR1514a;Derives_from=MI0010701
+chr4	.	miRNA_primary_transcript	43298214	43298387	.	+	.	ID=MI0010700;Alias=MI0010700;Name=pvu-MIR159a
+chr4	.	miRNA	43298320	43298340	.	+	.	ID=MIMAT0011170;Alias=MIMAT0011170;Name=pvu-miR159a.2;Derives_from=MI0010700
+chr4	.	miRNA	43298366	43298386	.	+	.	ID=MIMAT0015301;Alias=MIMAT0015301;Name=pvu-miR159a.1;Derives_from=MI0010700
+chr7	.	miRNA_primary_transcript	2635274	2635398	.	+	.	ID=MI0010699;Alias=MI0010699;Name=pvu-MIR2118
+chr7	.	miRNA	2635346	2635367	.	+	.	ID=MIMAT0011169;Alias=MIMAT0011169;Name=pvu-miR2118;Derives_from=MI0010699
+chr7	.	miRNA_primary_transcript	5883859	5884081	.	-	.	ID=MI0010706;Alias=MI0010706;Name=pvu-MIR399a
+chr7	.	miRNA	5883973	5883993	.	-	.	ID=MIMAT0011177;Alias=MIMAT0011177;Name=pvu-miR399a;Derives_from=MI0010706
+chr8	.	miRNA_primary_transcript	862464	862547	.	+	.	ID=MI0010702;Alias=MI0010702;Name=pvu-MIR482
+chr8	.	miRNA	862469	862490	.	+	.	ID=MIMAT0011172;Alias=MIMAT0011172;Name=pvu-miR482-5p;Derives_from=MI0010702
+chr8	.	miRNA	862521	862542	.	+	.	ID=MIMAT0011173;Alias=MIMAT0011173;Name=pvu-miR482-3p;Derives_from=MI0010702
+chr8	.	miRNA_primary_transcript	49086396	49086599	.	+	.	ID=MI0010705;Alias=MI0010705;Name=pvu-MIR319c
+chr8	.	miRNA	49086569	49086589	.	+	.	ID=MIMAT0011176;Alias=MIMAT0011176;Name=pvu-miR319c;Derives_from=MI0010705

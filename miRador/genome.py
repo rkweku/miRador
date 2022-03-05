@@ -10,7 +10,7 @@ class Genome:
     Class grouping of genome functions and data structures
     """
 
-    def __init__(self, filename, bowtieBuildPath):
+    def __init__(self, filename, bowtieBuildPath, samtoolsPath):
         self.filename = filename
 
         ### Initialize several output folders if they do not exist yet
@@ -37,6 +37,10 @@ class Genome:
 
         # Build the bowtie index if it does not exist yet
         self.indexFilename = self.buildBowtieIndex(bowtieBuildPath)
+
+        # Create a fasta index file for the genome FASTA file, if it does not
+        # yet exist
+        self.buildFastaIndex(samtoolsPath)
 
     def splitGenomeFasta(self):
         """Split the genome file into multiple files, where each chromosome
@@ -157,6 +161,52 @@ class Genome:
         log.closeLogger(logger)
 
         return(indexFilename)
+
+    def checkFastaIndexNeedsUpdate(self):
+        """Check if the index filename already exists. Return true if it
+        does not and needs to be updated, but return false if doesn't
+        need an update.
+
+        Args:
+            indexFilename: Name of the index file that would be created
+                by samtools faitx command
+
+        Returns:
+            True if no update is needed, false if an update is needed
+
+        """
+
+        # Check if a fasta index file exists, and if it does, return false,
+        # otherwise, return true so that samtools faitx can be run
+        if(os.path.exists("%s.fai" % self.filename)):
+            return(False)
+
+        return(True) 
+
+    def buildFastaIndex(self, samtoolsBuildPath):
+        """Code to create a fasta infdex
+
+        Args:
+            samtoolsBuildPath: Path of samtools
+
+        """
+
+        # Initialize our logger
+        logger = log.setupLogger("buildsamtoolsIndex")
+
+        if(self.checkFastaIndexNeedsUpdate()):
+            logger.info("Building a fasta index for %s" % (self.filename))
+            returnCode = subprocess.call([samtoolsBuildPath, "faidx",
+                self.filename])
+
+            if(returnCode):
+                logger.info("Something went wrong when building fasta index. "\
+                    "Command was\n%s %faidx %s" % (samtoolsBuildPath,
+                        self.filename))
+                sys.exit()
+
+        log.closeLogger(logger)
+
 
     def combineIRTempFiles(self, IRFastaFilenamesList,
             IRAlignmentFilenamesList, runEInvertedFlag):

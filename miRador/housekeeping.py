@@ -11,7 +11,7 @@ import setupMiRBase
 def housekeeping(genomeFilename, libFilenamesString, libFolder,
         libFilenamesList, bowtiePath, bowtieBuildPath, einvertedPath,
         blastnPath, makeblastdbPath, perlPath, RNAFoldPath, RNAPlotPath,
-        ps2pdfwrPath, outputFolder, organism, version):
+        samtoolsPath, ps2pdfwrPath, outputFolder, organism, version):
     """Perform various housekeeping functions including the checks that all
     external program dependencies exist, that files being referenced and
     folders that will be written to exist and are created. Additionally,
@@ -34,6 +34,7 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
         perlPath: The path of perl on the system
         RNAFoldPath: The path of RNAFold on the system
         RNAPlotPath: The path of RNAPlot on the system
+        samtoolsPath: The path of samtools on the system
         ps2pdfwrPath: The path of ps2pdfwr on the system
         outputFolder: The config entry for the output folder. Can be blank
         organism: The three letter identifier of the organism being studied
@@ -111,6 +112,11 @@ def housekeeping(genomeFilename, libFilenamesString, libFolder,
 
     if(not shutil.which(RNAPlotPath)):
         logger.error("RNAPlot could not be found at the provided path: %s\n"\
+            "Correct before running again" % RNAPlotPath)
+        sys.exit()
+
+    if(not shutil.which(samtoolsPath)):
+        logger.error("samtools could not be found at the provided path: %s\n"\
             "Correct before running again" % RNAPlotPath)
         sys.exit()
 

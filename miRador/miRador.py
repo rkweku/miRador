@@ -181,6 +181,7 @@ def miRador():
     perlPath = os.path.expanduser(config.get("General", "perlPath"))
     RNAFoldPath = os.path.expanduser(config.get("General", "RNAFoldPath"))
     RNAPlotPath = os.path.expanduser(config.get("General", "RNAPlotPath"))
+    samtoolsPath = os.path.expanduser(config.get("General", "samtoolsPath"))
     ps2pdfwrPath = os.path.expanduser(config.get("General", "ps2pdfwrPath"))
     outputFolder = config.get("General", "outputFolder", fallback = "")
 
@@ -195,15 +196,15 @@ def miRador():
     mirBaseDict, outputFolder = housekeeping.housekeeping(genomeFilename,
         libFilenamesString, libFolder, libFilenamesList, bowtiePath,
         bowtieBuildPath, einvertedPath, blastnPath, makeblastdbPath,
-        perlPath, RNAFoldPath, RNAPlotPath, ps2pdfwrPath, outputFolder,
-        organism, version)
+        perlPath, RNAFoldPath, RNAPlotPath, samtoolsPath,
+        ps2pdfwrPath, outputFolder, organism, version)
 
     # Set the number of cores, if parallel is on
     if(parallel):
         nproc = int(round(int(multiprocessing.cpu_count()*.5),1))
 
     # Create genome object
-    GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath)
+    GenomeClass = genome.Genome(genomeFilename, bowtieBuildPath, samtoolsPath)
 
     ##########################################################################
 
@@ -469,7 +470,7 @@ def miRador():
 
     filterPrecursors.writeCandidates(outputFolder, candidatesByLibDict,
         filteredPrecursorsDict, GenomeClass.IRDictByChr, libFilenamesList,
-        GenomeClass.chrDict)
+        GenomeClass.chrDict, genomeFilename)
 
     ##########################################################################
 

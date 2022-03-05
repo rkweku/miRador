@@ -5,6 +5,8 @@ import sys
 
 import log
 
+from Bio import SeqIO
+
 def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
         precursorsDictByChr):
     """Write the precursors with their duplex to the output file
@@ -20,7 +22,8 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
     """
 
     # Open the output file
-    with open(filename, "w") as f:
+    with open(filename, "w") as f, open("%s.fa" % \
+            os.path.splitext(filename)[0], "w") as f_fasta:
         # loop through the chromosomes, sorted in numerical order
         for chrName in sorted(chrDict.keys()):
             chrIndex = chrDict[chrName]
@@ -40,6 +43,7 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                 # Write the precursor (its name, coordinates, and alignment)
                 # to the precursor file
                 f.write("%s,%s," % (precursorName, chrName))
+                f.write(">%s\n" % precursorName)
                 for i in range(len(coordinates)):
                     if(i == 5 or i == 6 or i == 7 or i == 8):
                         # We want to use U instead of T, but since the strand
@@ -47,6 +51,7 @@ def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
                         # with this line) can't contain T, this should be
                         # safe here
                         f.write("%s\n" % coordinates[i].replace("T", "U"))
+
                     else:
                         f.write("%s," % coordinates[i]) 
 
@@ -737,7 +742,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
     return(finalCandidates)
 
 def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
-        IRDictByChr, libFilenamesList, chrDict):
+        IRDictByChr, libFilenamesList, chrDict, genomeFilename):
     """Write the candidate miRNAs to the provided filename
 
     Args:
@@ -752,14 +757,17 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
         libFilenamesList: A list of the library filenames used for predictions
         chrDict: Dictionary of chromosome names as the key and their index
             in a list for many variables
+        genomeFilename: Path to the genome file to access sequences
 
     """
 
     outputFilename = "%s/preAnnotatedCandidates.csv" % outputFolder
     fastaFilename = "%s/preAnnotatedCandidates.fa" % outputFolder
+    precursorsFilename = "%s/precursors.fa" % outputFolder
 
     # Open the output files
-    with open(outputFilename, "w") as f, open(fastaFilename, "w") as g:
+    with open(outputFilename, "w") as f, open(fastaFilename, "w") as g, \
+            open(precursorsFilename, "w") as h:
         # Write the column names
         f.write("miR Name,Chr,Strand,miR Position,miR Sequence,miR Hits,"\
             "miR Length,Star Position,Star Sequence,Star Hits,Star Length,")
@@ -832,6 +840,20 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # fasta file
                     g.write(">%s\n" % mirName)
                     g.write("%s\n" % mirSeq.replace("T", "U"))
+
+                    h.write(">%s\n" % mirName)
+                    # Use samtools to identify the sequence from the genome
+                    # file 
+                    queryPos = "%s:%s-%s" % (chrName, coordinates[0],
+                        coordinates[3])
+                    proc = subprocess.Popen(["samtools", "faidx",
+                        genomeFilename, queryPos], stdout = subprocess.PIPE)
+
+                    # Grab the output parse to just the sequence to be written
+                    output = proc.stdout.read()
+                    output = output.decode("utf-8")
+                    sequence = output.split("\n", 1)[1].replace("\n", "")
+                    h.write("%s\n" % sequence)
 
                     f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," % (mirName,
                         chrName, strand, mirPos, mirSeq.replace("T", "U"),

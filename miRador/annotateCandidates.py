@@ -1013,7 +1013,7 @@ def annotateCandidates(outputFolder, similarityDict, organism, mirBaseDict,
             # If the number of libraries this miRNA was predicted in is
             # greater than 1 as well as greater than 10% of the given
             # libraries, then we will confirm the replication requirement
-            if(True):#libCount > 1 and libCount > float(numLibs * .1)):
+            if(libCount > 1 and libCount > float(numLibs * .1)):
                 line.append("Novel")
                 classificationCountsList[4] += 1
 

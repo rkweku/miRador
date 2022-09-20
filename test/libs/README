@@ -1,0 +1,10 @@
+There are two test libraries that can be downloaded from GEO:
+https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM1402nnn/GSM1402274/suppl/GSM1402274_Col_1.S09.txt.gz
+https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM1402nnn/GSM1402275/suppl/GSM1402275_Col_2.S10.txt.gz
+
+These two files can be downloaded with the following commands:
+wget https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM1402nnn/GSM1402274/suppl/GSM1402274_Col_1.S09.txt.gz
+wget https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM1402nnn/GSM1402275/suppl/GSM1402275_Col_2.S10.txt.gz
+
+And can be subsequently unzipped with the following :
+gunzip  GSM140227*

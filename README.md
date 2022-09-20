@@ -12,6 +12,8 @@ There are several dependencies of miRador, all of which are checked prior to run
 
 `bowtie`: http://bowtie-bio.sourceforge.net/index.shtml
 
+`einverted`: http://emboss.sourceforge.net/download/
+
 `ps2pdfwr`: https://www.ghostscript.com/download.html
 
 `perl`: https://www.perl.org/get.html

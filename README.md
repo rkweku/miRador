@@ -4,10 +4,22 @@
 ## Description
 miRador is a miRNA prediction tool developed to be the first of two compontents in a miRNA prediction and validation pipeline. While miRNAs can be predicted quite accurately with miRador alone, utilizing PARE data to predict and validate targets of novel miRNAs with sPARTA is the ultimate use of this package. Through runs of both programs, users will be able to provide evidence of cleavage at predicted targets of novel miRNAs.
 
-## Dependencies
-There are several dependencies of miRador, all of which are checked prior to running. However, in order to meet all dependencies, users should download the following:
+## Installation
+miRador comes with a conda environment file which can be utilized to ensure all dependencies are satisfied, with versions that miRador was developed for, prior to running. Install either anaconda or miniconda, if you do not have it installed already on your system, following either of the links below:
+Anaconda: https://www.anaconda.com/products/distribution
+miniconda: https://docs.conda.io/en/latest/miniconda.html
 
-### Standalone packages
+Once conda is installed, a miRador environment can be created with the following command from within the miRador directory:
+`conda create -n mirador -f environment.yml`
+
+When this command is complete, you are ready to run miRador. All of the dependencies in the following section should now be satisfied.
+
+If you opt to not utilize conda, the dependencies for miRador can be downloaded separately and their executable paths can be initialized in miRador.ini
+
+### Dependencies
+There are several dependencies of miRador, all of which are checked prior to running. If you opt to not utilize conda, you must download and install the following packages
+
+#### Standalone packages
 `blast`: ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
 
 `bowtie`: http://bowtie-bio.sourceforge.net/index.shtml
@@ -20,16 +32,18 @@ There are several dependencies of miRador, all of which are checked prior to run
 
 `python3`: https://www.python.org/downloads/
 
+`samtools`: htslib.org/download/
+
 `ViennaRNA`: https://www.tbi.univie.ac.at/RNA/#download
 
-### Python3 packages
+#### Python3 packages
 `PyPDF2`: https://pypi.org/project/PyPDF2/
 
 Upon python installation, Python packages may be installed via pip. If your system does not have pip installed already, or you do not have pip for your version of python, you can follow the installation instructions here: https://pip.pypa.io/en/stable/installing/.
 
 If you do not have sudo privileges on your system, the --user option can be used when installing packages with pip. This will add the package to your local directory python directory and allow you to install any package without the need of sudo. To do this, open your terminal and simply type: `pip3 install --user PackageName`
 
-### Perl Modules
+#### Perl Modules
 `IO::String`: https://metacpan.org/pod/IO::String
 
 This can be installed via CPAN. See instructions here:
@@ -77,6 +91,9 @@ When all options in the configuration file are set, running miRador is quite sim
 ```
 python3 miRador miRador.ini
 ```
+
+The configuation file that is included in this repository include the first chromosome of the Arabidopsis TAIR10 genome and two sRNA sequencing libraries which can be used to test that miRador will run properly. These files do need to be unzipped before running. This can be done quite simply with the following command: `gunzip -r test`
+
 ## Output
 miRador writes its output to a folder provided by you, the user, or to a folder with the data and time as a means of providing a unique folder name. The contents of the folder are:
 - finalAnnotatedCandidates.csv: A CSV file containing the annotated miRNAs that miRador was able to identify

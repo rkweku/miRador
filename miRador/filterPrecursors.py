@@ -7,6 +7,23 @@ import log
 
 from Bio import SeqIO
 
+##############################################################################
+# These values here should almost never be changed. Changing these values will
+# modify the filtering criteria for candidate miRNAs. Only adjust if you are
+# absolutely confident that these should be changed.
+
+# 75% of reads from one-nucleotide positional variants of miRNA and miRNA*
+proportionThreshold = 0.75
+
+# Up to five mismatched positions, only three of which are nucleotides in
+# asymmetric bulges
+maxMismatch = 5
+# We've decided to penalize GU wobbles as half a point
+wobblePenalty = 0.5
+maxGap = 3
+
+##############################################################################
+
 def writeFilteredPrecursors(filename, chrDict, IRDictByChr,
         precursorsDictByChr):
     """Write the precursors with their duplex to the output file
@@ -453,7 +470,8 @@ def getVariantAbundance(mappedTagsDict, candidateSequence,
     else:
         return(variantAbundanceList)
 
-def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
+def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang, 
+        RPMThreshold):
     """This function will perform the sRNA mapping and abundance filters.
     It will first try to find a miRNA and miRNA* pair by identifying
     tags that map to opposite sides of the precursor. It will also create
@@ -465,6 +483,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
         IRDict: Dictionary of the inverted repeats in one chromosome
         libDict: The entire library dictionary to be queried for abundances
         overhang: Specific length of overhang that a duplex must have
+        RPMThreshold: Minimum RPM a candidate miRNA must have
     Returns:
         Dictionary of all precursors and the miRNA:miRNA* duplexes within
         that pass all filters
@@ -637,8 +656,9 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                             
                             # Only proceed if the alignment meets our filter
                             # specifications
-                            if(gapCount + mismatchCount + (wobbleCount * .5) 
-                                   <= 5 and gapCount <= 3):
+                            if(gapCount + mismatchCount + (wobbleCount * 
+                                    wobblePenalty) <= maxMismatch and gapCount
+                                    <= maxGap):
                                 # Get the hits information for the 5' and 3'
                                 # tags from libDict
                                 hits5 = libDict[mapped5Tag[0]][1]
@@ -677,8 +697,9 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                     (totalAbun5 + totalAbun3 + loopAbun)
 
                                 # The 5' mapping tag will be kept as a candidate
-                                # miRNA if it has at least an abundance of 3 RPM
-                                if(tag5Abun >= 3):
+                                # miRNA if it has an abundance above the
+                                # RPM threshold
+                                if(tag5Abun >= RPMThreshold):
                                     duplex = ("5p", mapped3Tag[0],
                                         candidate5Pos, candidate3Pos, tag5Abun,
                                         hits5, tag3Abun, hits3, matchCount, 
@@ -691,7 +712,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                     # abundance in the entire precursor,
                                     # add the duplex to the candidates
                                     # dictionary
-                                    if(proportion >= .75):
+                                    if(proportion >= proportionThreshold):
                                         # Add the precursor name as a key to
                                         # finalCandidates if it does not
                                         # yet exist. The value will be a list
@@ -707,9 +728,9 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                             mapped5Tag[0]] = duplex
 
                                 # The 3' mapping tag will be kept as a
-                                # candidate miRNA if it has an abundance
-                                # of at least 3 RPM
-                                if(tag3Abun >= 3):
+                                # candidate miRNA if it has an abundance above
+                                # the RPN threshold
+                                if(tag3Abun >= RPMThreshold):
                                     duplex = ("3p", mapped5Tag[0],
                                         candidate3Pos, candidate5Pos, tag3Abun,
                                         hits3, tag5Abun, hits5, matchCount,
@@ -722,7 +743,7 @@ def filterPrecursors(mappedTagsToPrecursors, IRDict, libDict, overhang):
                                     # abundance in the entire precursor,
                                     # add the duplex to the candidates
                                     # dictionary
-                                    if(proportion >= .75):
+                                    if(proportion >= proportionThreshold):
                                         # Add the precursor name as a key to
                                         # finalCandidates if it does not
                                         # yet exist. The valu will be a list of 

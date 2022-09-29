@@ -118,6 +118,7 @@ def miRador():
     advancedGap = config.get("Advanced", "gap")
     advancedThreshold = config.get("Advanced", "threshold")
     advancedMaxRepLen = config.get("Advanced", "maxRepLen")
+    RPMThreshold = config.getfloat("Advanced", "RPMThreshold")
 
     # If the advanced settings are set, override whatever has been set in them
     if(advancedMatch):
@@ -423,7 +424,7 @@ def miRador():
 
             filteredPrecursorsDict[libNameNoFolders][chrName] = \
                 filterPrecursors.filterPrecursors(precursorList, IRDict,
-                Lib.libDict, overhang)
+                Lib.libDict, overhang, RPMThreshold)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)

@@ -57,6 +57,7 @@ Running miRador requires modifying a configuration file, initially named `miRado
 |-------------------------|--------|----------------------------------------------------------------------------------------------|
 |genomeFilename           |        |The path and name of the genome file                                                          |
 |runEInvertedFlag         |1       |Flag to be set if you wish to run EInverted                                                   |
+|einvertedPresets         |        |Presets for einverted parameters to be set. low, medium, or high                              |
 |gap                      |6       |EInverted score for gaps                                                                      |
 |match                    |3       |EInverted score for matches                                                                   |
 |mismatch                 |-4      |EInverted penalty score for mismatches                                                        |
@@ -78,13 +79,24 @@ Running miRador requires modifying a configuration file, initially named `miRado
 |ps2pdfwrPath             |        |Path of ps2pdfwr                                                                              |
 |outputFolder             |        |Name of specific folder to write data to. *If folder exists, data within will be overwritten* |
 
-## Bowtie
+### Bowtie
 Bowtie has been configured to be run with the following arguments. While these can be changed, there is no simple option to do so within the ini file and thus changes would need to be done within library.py. With that said, the specific options are as follows:
 - -a to report all valid alignments as we want multihits to the genome. We expect few multi-matches to the genome
 - --best and --strata ensures only the best alignments are reported and so that less optimum but passable alignments do not appear
 - -v 0 Allow no mismatch
 - --sam-nohead removes the header from the SAM file. This is useful because we have to merge the fragment alignments for parallel runs
 - --no-unal suppresses sequences with no alignemnt. This helps to keep the map file manageable and filter out these sequences earlier for efficiency
+
+### Einverted
+Einverted is utilized to predict an initial set of inverted repeats from the genome FASTA file.
+There are three presets which can be selected by the user, low, medium or high, which assigns pre-defined preset scores for matches and mismatches (utilize negative integer), penalty score for gaps (utilize positive integer), and the overall scoring threshold for reporting an inverted repeats. 
+low: match = 3, mismatch = -4, gap = 6, threshold = 40
+medium: match = 3, mismatch = -4, gap = 6, threshold = 45
+high: match = 3, mismatch = -5, gap = 7, threshold = 50
+
+A `maxRepLen` variable is editable as well, though we recommend this remain at its default value of 300.
+
+While we generally recommend running miRador with a medium threshold, you are able to edit the individual scores and penalties yourself with the respective variables in the configuation file. If a preset is used, you may simply override the default values of any, or all scores, by placing a value yourself. For instance, you can use the medium presets, but set `mismatch = -5` to run the pipeline with the medium scores, but the mismatch score will be overridden by your provided score.
 
 ## Examples
 When all options in the configuration file are set, running miRador is quite simple. From the miRador base directory, type:

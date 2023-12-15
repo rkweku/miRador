@@ -53,6 +53,7 @@ class Library:
     def __init__(self, filename, chrDict):
         self.filename = filename
         self.mappedReads = 0
+        self.numReads = 0
 
         # Create the name of the temp fasta file. This is needed for
         # the bowtie mapping step
@@ -166,6 +167,7 @@ class Library:
         with open(self.filename) as f, open(self.fastaFilename, "w") as g:
             for count, line in enumerate(f, start=0):
                 if(count % 2 == 1):
+                    self.numReads += 1
                     # Store the sequence and count into variables, then add
                     # them to the dictionary. There should not be any
                     # duplicate sequences in this format, however,
@@ -224,6 +226,7 @@ class Library:
         with open(self.filename) as f, open(self.fastaFilename, "w") as g:
             for count, line in enumerate(f, start=0):
                 if(count % 4 == 1):
+                    self.numReads += 1
                     # Store the sequence and count into variables, then add
                     # them to the dictionary. There should not be any
                     # duplicate sequences in this format, however,
@@ -291,6 +294,7 @@ class Library:
                 # Write the sequence to a unique reads FASTA file
                 g.write(">s_%s\n%s\n" % (readCount, tag))
                 readCount += 1
+                self.numReads += count
 
         # Stop timer for function
         funcEnd = time.time()
@@ -369,12 +373,14 @@ class Library:
 
         return(logFilename)
 
-    def normalizeReads(self, logFilename):
+    def normalizeReads(self, logFilename, normalizationBy):
         """Normalize all of the reads in libDict
 
         Args:
             logFilename: bowtie log file that will be opened to view the
                 total number of alignments
+            normalizationBy: Option to either normalize by all reads,
+                or just by mapped reads
 
         """
 
@@ -385,16 +391,22 @@ class Library:
 
         toParseLine = logFile[-1]
 
-        self.mappedReads = int(re.search("Reported (.*) alignments",
-            toParseLine).group(1))
+        if(normalizationBy == "mapped"):
+            self.mappedReads = int(re.search("Reported (.*) alignments",
+                toParseLine).group(1))
+            normalizationFactor = self.mappedReads/1000000
+        else:
+            normalizationFactor = self.numReads/1000000
 
         for sequence, countsHits in self.libDict.items():
             counts = countsHits[0]
             hits = countsHits[1]
 
+            
+
             if(hits):
                 # Normalize the counts to RPM
-                normalizedAbun = (counts * 1000000) / self.mappedReads
+                normalizedAbun = counts / normalizationFactor
                 # Replace the counts in libDict with hits normalized abundnace
                 self.libDict[sequence][0] = normalizedAbun / hits
 

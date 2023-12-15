@@ -139,6 +139,7 @@ def miRador():
     libFilenamesString = config.get("Libraries", "libFilenamesList",
         fallback = "")
     libFolder = config.get("Libraries", "libFolder", fallback = "")
+    normalizeBy = config.get("Libraries", "normalizeBy", fallback = "all")
 
     # If individual libraries were given, split the string on commas and
     # store them in libFilenamesList 
@@ -316,7 +317,7 @@ def miRador():
         Lib.createMappedList(GenomeClass.chrDict)
 
         # Normalize the reads in libDict
-        Lib.normalizeReads(logFilename)
+        Lib.normalizeReads(logFilename, normalizeBy)
 
         funcEnd = time.time()
         execTime = round(funcEnd - funcStart, 2)

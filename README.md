@@ -10,7 +10,7 @@ Anaconda: https://www.anaconda.com/products/distribution
 miniconda: https://docs.conda.io/en/latest/miniconda.html
 
 Once conda is installed, a miRador environment can be created with the following command from within the miRador directory:
-`conda create -n mirador -f environment.yml`
+`conda env create -n mirador -f environment.yml`
 
 When this command is complete, you are ready to run miRador. All of the dependencies in the following section should now be satisfied.
 
@@ -19,10 +19,19 @@ ___
 In the event that there are issues installing via the provided .yml file, you may also try to create your own conda environment that will be miRador ready. First, create a conda environment:  
 `conda create --name mirador`  
 
+Next, activate the envioronment
+`conda activate mirador`
+
+Set the conda channel priority to flexible as some environments will fail without this change. We will change it back to strict at the end.
+`conda config --set channel_priority flexible`
+
 Then, install the following packages:  
 `conda install python=3.7.13`  
-`conda install -c conda-forge ghostscript=9.54.0 perl=5.32.1 pypdf2=2.11.1 typing_extensions-4.5.0`  
+`conda install -c conda-forge ghostscript=9.54.0 perl=5.32.1 pypdf2=2.11.1 typing_extensions=4.5.0`  
 `conda install -c bioconda biopython=1.78 blast=2.13.0 bowtie=1.3.1 emboss=6.6.0 samtools=1.6 perl-io-string=1.08 viennarna=2.5.1`  
+
+Finally, reset the channel priority back to strict
+`conda config --set channel_priority strict`
 ___
 If you opt to not utilize conda, the dependencies for miRador can be downloaded separately and their executable paths can be initialized in miRador.ini
 

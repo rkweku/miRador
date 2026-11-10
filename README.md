@@ -5,7 +5,7 @@
 miRador is a miRNA prediction tool developed to be the first of two compontents in a miRNA prediction and validation pipeline. While miRNAs can be predicted quite accurately with miRador alone, utilizing PARE data to predict and validate targets of novel miRNAs with sPARTA is the ultimate use of this package. Through runs of both programs, users will be able to provide evidence of cleavage at predicted targets of novel miRNAs.
 
 ## Installation
-miRador comes with a conda environment file which can be utilized to ensure all dependencies are satisfied, with versions that miRador was developed for, prior to running. Install either anaconda or miniconda, if you do not have it installed already on your system, following either of the links below:
+miRador runs on Python 3.12. It comes with a conda environment file which can be utilized to ensure all dependencies are satisfied, with versions that miRador has been validated with, prior to running. Install either anaconda or miniconda, if you do not have it installed already on your system, following either of the links below:
 Anaconda: https://www.anaconda.com/products/distribution
 miniconda: https://docs.conda.io/en/latest/miniconda.html
 
@@ -22,16 +22,8 @@ In the event that there are issues installing via the provided .yml file, you ma
 Next, activate the envioronment
 `conda activate mirador`
 
-Set the conda channel priority to flexible as some environments will fail without this change. We will change it back to strict at the end.
-`conda config --set channel_priority flexible`
-
-Then, install the following packages:  
-`conda install python=3.7.13`  
-`conda install -c conda-forge ghostscript=9.54.0 perl=5.32.1 pypdf2=2.11.1 typing_extensions=4.5.0`  
-`conda install -c bioconda biopython=1.78 blast=2.13.0 bowtie=1.3.1 emboss=6.6.0 samtools=1.6 perl-io-string=1.08 viennarna=2.5.1`  
-
-Finally, reset the channel priority back to strict
-`conda config --set channel_priority strict`
+Then, install the following packages from conda-forge and bioconda:  
+`conda install -c conda-forge -c bioconda python=3.12 biopython=1.88 blast=2.17.0 bowtie=1.3.1 emboss=6.6.0 ghostscript=10.08.0 numpy=2.5.4 perl=5.32.1 perl-io-string=1.08 pypdf=6.21.4 samtools=1.25 viennarna=2.7.2`  
 ___
 If you opt to not utilize conda, the dependencies for miRador can be downloaded separately and their executable paths can be initialized in miRador.ini
 
@@ -49,14 +41,16 @@ There are several dependencies of miRador, all of which are checked prior to run
 
 `perl`: https://www.perl.org/get.html
 
-`python3`: https://www.python.org/downloads/
+`python3` (3.12): https://www.python.org/downloads/
 
 `samtools`: htslib.org/download/
 
 `ViennaRNA`: https://www.tbi.univie.ac.at/RNA/#download
 
 #### Python3 packages
-`PyPDF2`: https://pypi.org/project/PyPDF2/
+`biopython`: https://pypi.org/project/biopython/ (pairwise alignment uses `Bio.Align.PairwiseAligner`)
+
+`pypdf`: https://pypi.org/project/pypdf/ (the successor of PyPDF2; PyPDF2 is still used as a fallback if pypdf is not installed)
 
 Upon python installation, Python packages may be installed via pip. If your system does not have pip installed already, or you do not have pip for your version of python, you can follow the installation instructions here: https://pip.pypa.io/en/stable/installing/.
 

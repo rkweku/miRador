@@ -5,8 +5,17 @@ import shutil
 import subprocess
 import sys
 
-from Bio import pairwise2
-from PyPDF2 import PdfFileReader, PdfFileMerger
+from Bio.Align import PairwiseAligner
+try:
+    from pypdf import PdfWriter
+except ImportError:  # older environments that only provide PyPDF2
+    from PyPDF2 import PdfMerger as PdfWriter
+
+# Global alignment scored exactly like the former Biopython call
+# globalms(query, subject, 1, 0, -1, -1): match 1, mismatch 0,
+# gap open -1, gap extend -1, end gaps penalized. Only the score is used.
+_ALIGNER = PairwiseAligner(mode="global", match_score=1, mismatch_score=0,
+    open_gap_score=-1, extend_gap_score=-1)
 
 import log
 
@@ -145,10 +154,7 @@ def pairwiseAlignmentParallel(queryTuple, subjectSeqsList, organism):
         # Perform the alignment between the two sequences. Score 1 poin
         # for a match, 0 for a mismatch, and -1 for gaps in either
         # sequence. Only use the best sequence
-        for a in pairwise2.align.globalms(querySeq, subjectSeq, 1, 0,
-                -1, -1, one_alignment_only=True):
-            # Store just the score from the alignment
-            score = a[2]
+        for score in (_ALIGNER.score(querySeq, subjectSeq),):
 
             # If the length fo the query - score is less than 5, that
             # suggests there were fewer than 5 total mismatches and thus
@@ -240,10 +246,7 @@ def pairwiseAlignment(querySeqsList, subjectSeqsList, organism):
             # Perform the alignment between the two sequences. Score 1 poin
             # for a match, 0 for a mismatch, and -1 for gaps in either
             # sequence. Only use the best sequence
-            for a in pairwise2.align.globalms(querySeq, subjectSeq, 1, 0,
-                    -1, -1, one_alignment_only=True):
-                # Store just the score from the alignment
-                score = a[2]
+            for score in (_ALIGNER.score(querySeq, subjectSeq),):
 
                 # If the length fo the query - score is less than 5, that
                 # suggests there were fewer than 5 total mismatches and thus
@@ -789,11 +792,11 @@ def mergePDF(outputFolder):
 
     imagesFolder = "%s/images" % outputFolder
 
-    pdf_files = [f for f in os.listdir(imagesFolder) if f.endswith("pdf")]
-    merger = PdfFileMerger()
+    # sorted() makes the page order deterministic across file systems
+    pdf_files = sorted(f for f in os.listdir(imagesFolder) if f.endswith("pdf"))
+    merger = PdfWriter()
     for filename in pdf_files:
-        merger.append(PdfFileReader(os.path.join(imagesFolder,
-            filename), "rb"))
+        merger.append(os.path.join(imagesFolder, filename))
 
     merger.write("%s/images/mergedPrecursors.pdf" % outputFolder)
 

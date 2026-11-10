@@ -867,11 +867,14 @@ def writeCandidates(outputFolder, candidatesByLibDict, filteredPrecursorsDict,
                     # file 
                     queryPos = "%s:%s-%s" % (chrName, coordinates[0],
                         coordinates[3])
-                    proc = subprocess.Popen(["samtools", "faidx",
-                        genomeFilename, queryPos], stdout = subprocess.PIPE)
+                    # run() waits for samtools and fails loudly on a non-zero
+                    # exit instead of leaving an unreaped process
+                    proc = subprocess.run(["samtools", "faidx",
+                        genomeFilename, queryPos], stdout = subprocess.PIPE,
+                        check = True)
 
                     # Grab the output parse to just the sequence to be written
-                    output = proc.stdout.read()
+                    output = proc.stdout
                     output = output.decode("utf-8")
                     sequence = output.split("\n", 1)[1].replace("\n", "")
                     h.write("%s\n" % sequence)
